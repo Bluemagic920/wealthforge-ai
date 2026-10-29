@@ -9,7 +9,7 @@ const groups=['customers','drafts','workflows','assets','goals','cash'];
 const types={customers:'customer',drafts:'draft',workflows:'workflow',assets:'asset',goals:'goal',cash:'cash'};
 const reverse=Object.fromEntries(Object.entries(types).map(([k,v])=>[v,k]));
 const blank=()=>Object.fromEntries(groups.map(g=>[g,[]]));
-let user=null,ready=false,busy=false,pending=false,delay=null,epoch=0;
+let user=null,ready=false,busy=false,pending=false,delay=null,epoch=0,conflictLocked=false;
 const scoped=id=>'wealthforge_user_'+id;
 const baselineKey=id=>'wealthforge_baseline_v142_'+id;
 const fingerprint=x=>JSON.stringify(x);
@@ -28,6 +28,8 @@ async function fetchRows(id){
 }
 function merged(id,rows){
  const result=local(id),baseline=readBaseline(id);let needsSync=false;recoveryRows=null;
+ const cloudKeys=new Set(rows.map(r=>r.record_type+'|'+r.payload.id));
+ for(const g of groups){result[g]=result[g].filter(item=>{const key=types[g]+'|'+item.id;if(!(key in baseline)||cloudKeys.has(key))return true;if(fingerprint(item)===baseline[key])return false;throw Error('Cloud record was deleted while a local edit exists; export a backup and resolve on one device.');});}
  for(const r of rows){
   const group=reverse[r.record_type],key=r.record_type+'|'+r.payload.id;
   const index=result[group].findIndex(x=>x.id===r.payload.id);
@@ -52,11 +54,11 @@ async function activate(u){
  localStorage.setItem('wealthforge_active_user',u.id);
  saveBaseline(u.id,rows);
  ready=true;
- status('Cloud ready: '+rows.length+' record(s). Changes auto-save; deletions remain local only.');
+ status('Cloud ready: '+rows.length+' record(s). Changes auto-save; deletions synchronize with conflict checks.');
  if(localStorage.getItem('wealthforge_loaded_user')!==u.id){localStorage.setItem('wealthforge_loaded_user',u.id);location.reload();return}
- if(needsSync)schedule();
+ if(needsSync&&!conflictLocked)schedule();
  // If another tab changed the account data, reload the dashboard to show it.
- }catch(e){ready=false;status('Sync paused: '+e.message)}
+ }catch(e){ready=false;conflictLocked=true;status('Sync paused: '+e.message)}
 }
 async function refresh(){const {data,error}=await sb.auth.getUser();if(error&&error.name!=='AuthSessionMissingError')status(error.message);await activate(data?.user||null)}
 sb.auth.onAuthStateChange((_event,session)=>{const id=session?.user?.id||null;if(id!==(user?.id||null))setTimeout(()=>activate(session?.user||null),0)});
@@ -67,66 +69,83 @@ $('signIn').onclick=async()=>{try{const {error}=await sb.auth.signInWithPassword
 $('signOut').onclick=async()=>{const {error}=await sb.auth.signOut();if(error)status(error.message);else await activate(null)};
 $('resetPassword').onclick=async()=>{try{const email=$('authEmail').value.trim();if(!email)throw Error('Enter your email first.');const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(error)throw error;status('If an account exists, a reset email may arrive.')}catch(e){status(e.message)}};
 async function sync(){
- if(!user||!ready)return; if(busy){pending=true;return}
+ if(!user||!ready||conflictLocked)return; if(busy){pending=true;return}
  busy=true;const id=user.id;const token=epoch;
  try{
  const d=local(id);if(!valid(d))throw Error('Invalid account data');
  const rows=await fetchRows(id);if(token!==epoch)return;
  const existing=new Map(rows.map(r=>[r.record_type+'|'+r.payload.id,r]));
- const updates=[],adds=[];
+ const updates=[],adds=[],deletes=[];
+ const baseline=readBaseline(id);
+ const localKeys=new Set(groups.flatMap(g=>d[g].map(item=>types[g]+'|'+item.id)));
+ for(const [key,old] of existing){
+  if(localKeys.has(key)||!(key in baseline))continue;
+  if(baseline[key]!==fingerprint(old.payload))throw Error('Cloud record changed before deletion; sync paused');
+  deletes.push(old);
+ }
  for(const g of groups)for(const item of d[g]){
  if(!item||typeof item.id!=='string'||!item.id)throw Error('Invalid '+g+' item');
  const key=types[g]+'|'+item.id,old=existing.get(key);
  if(old){
   if(JSON.stringify(old.payload)!==JSON.stringify(item)){
-   const baseline=readBaseline(id);
    if(baseline[key]!==JSON.stringify(old.payload))throw Error('Concurrent change detected; sync paused to protect cloud data');
-   updates.push({id:old.id,payload:item});
+   updates.push({id:old.id,payload:item,updated_at:old.updated_at});
   }
  }else adds.push({user_id:id,record_type:types[g],payload:item});
  }
  if(rows.length+adds.length>1000)throw Error('Record limit exceeded');
  for(const row of adds){const {error}=await sb.from('wealthforge_records').insert(row);if(error)throw error}
- for(const row of updates){const {error}=await sb.from('wealthforge_records').update({payload:row.payload,updated_at:new Date().toISOString()}).eq('id',row.id).eq('user_id',id);if(error)throw error}
+ for(const row of updates){const {data,error}=await sb.from('wealthforge_records').update({payload:row.payload,updated_at:new Date().toISOString()}).eq('id',row.id).eq('user_id',id).eq('updated_at',row.updated_at).select('id');if(error)throw error;if(data.length!==1)throw Error('Cloud changed during update; stopped to protect data') }
+ for(const row of deletes){const {data,error}=await sb.from('wealthforge_records').delete().eq('id',row.id).eq('user_id',id).eq('updated_at',row.updated_at).select('id');if(error)throw error;if(data.length!==1)throw Error('Cloud changed during deletion; stopped to protect data')}
  const after=await fetchRows(id);
  saveBaseline(id,after);
- status('Auto-synced: '+adds.length+' added, '+updates.length+' updated. Deletions are not synced.');
- }catch(e){ready=false;status('Auto-sync paused: '+e.message+'. Export a backup; do not overwrite cloud data.')}
+ status('Auto-synced: '+adds.length+' added, '+updates.length+' updated, '+deletes.length+' deleted.');
+ }catch(e){ready=false;conflictLocked=true;status('Auto-sync paused: '+e.message+'. Export a backup; use Keep Cloud Version to resolve.')}
  finally{busy=false;if(pending&&ready){pending=false;sync()}}
 }
 function schedule(){if(!ready)return;clearTimeout(delay);delay=setTimeout(sync,900)}
 window.addEventListener('wealthforge:changed',schedule);
-const recovery=document.createElement('button');recovery.textContent='Review local changes (conflict recovery)';recovery.hidden=true;
-$('cloudUpload').parentElement.appendChild(recovery);
-const oldStatus=status;
-// Only offer recovery for a known local/cloud conflict.
-const observer=new MutationObserver(()=>{recovery.hidden=!($('cloudStatus').textContent.includes('Local/cloud conflict'))});
-observer.observe($('cloudStatus'),{childList:true,characterData:true,subtree:true});
-recovery.onclick=async()=>{
- if(!user||!recoveryRows?.length)return status('No conflicting cloud records found.');
- const id=user.id,localData=local(id),conflicts=recoveryRows;
- const changes=conflicts.map(r=>({row:r,group:reverse[r.record_type],item:localData[reverse[r.record_type]]?.find(x=>x.id===r.payload.id)})).filter(x=>x.item);
- if(!changes.length)return status('No local changes found.');
- const details=changes.map(x=>x.group+': '+(x.item.name||x.item.id)+' (local vs cloud)').join('\n');
- if(!confirm('You exported a JSON backup. Overwrite these '+changes.length+' cloud record(s) with the LOCAL versions?\n\n'+details+'\n\nCancel if another device has newer changes.'))return;
- try{
-  for(const x of changes){
-   const {data,error}=await sb.from('wealthforge_records').update({payload:x.item,updated_at:new Date().toISOString()}).eq('id',x.row.id).eq('user_id',id).eq('updated_at',x.row.updated_at).select('id');
-   if(error)throw error;if(data.length!==1)throw Error('Cloud record changed since review; recovery stopped.');
-  }
-  const rows=await fetchRows(id);saveBaseline(id,rows);recoveryRows=null;ready=true;
-  status('Recovered '+changes.length+' local edit(s) to cloud. Reloading…');location.reload();
- }catch(e){status('Recovery stopped: '+e.message+'. Your local backup remains safe.')}
-};
+// Deliberately omit legacy 'Review local changes' overwrite: use backup and Keep Cloud Version.
 $('cloudUpload').textContent='Sync changes now';
-$('cloudUpload').onclick=()=>sync();
+$('cloudUpload').onclick=()=>{if(!ready||conflictLocked)return status('Sync is paused. Export a backup, then use Keep Cloud Version.');sync()};
 $('cloudDownload').textContent='Refresh from cloud';
 $('cloudDownload').onclick=async()=>{
  if(!user)return status('Sign in first.');
+ if(conflictLocked)return status('Sync remains paused. Export a backup, then choose Keep Cloud Version.');
  try{const rows=await fetchRows(user.id),{result,needsSync}=merged(user.id,rows);
  localStorage.setItem(scoped(user.id),JSON.stringify(result));
  saveBaseline(user.id,rows);
  status('Cloud refreshed. Reloading…');location.reload()
  }catch(e){status('Refresh stopped: '+e.message)}
 };
+
+// Explicit recovery: discard the stale local snapshot and replace it with the
+// complete current cloud snapshot. Never merge or auto-upload during recovery.
+const cloudBackup=document.createElement('button');
+cloudBackup.textContent='Export JSON backup';
+$('cloudDownload').parentElement.appendChild(cloudBackup);
+cloudBackup.onclick=()=>document.getElementById('export').click();
+const keepCloud=document.createElement('button');
+keepCloud.textContent='Keep Cloud Version (discard local changes)';
+keepCloud.style.marginLeft='8px';
+$('cloudDownload').parentElement.appendChild(keepCloud);
+keepCloud.onclick=async()=>{
+ if(!user)return status('Sign in first.');
+ if(!confirm('Have you exported a JSON backup? This will DISCARD unsynced local changes and load the current cloud records.'))return;
+ const id=user.id;
+ ready=false;conflictLocked=true;clearTimeout(delay);pending=false;
+ const token=++epoch;
+ try{
+  const rows=await fetchRows(id);
+  if(token!==epoch)return;
+  const result=blank();
+  for(const r of rows)result[reverse[r.record_type]].push(r.payload);
+  localStorage.setItem(scoped(id),JSON.stringify(result));
+  saveBaseline(id,rows);
+  recoveryRows=null;
+  status('Cloud version restored. Reloading without uploading local edits…');
+  location.reload();
+ }catch(e){status('Cloud recovery failed: '+e.message+'. Synchronization remains paused.')}
+};
+
 })();
