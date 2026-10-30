@@ -5,6 +5,7 @@ const $=id=>document.getElementById(id);
 const status=msg=>{$('cloudStatus').textContent=msg};
 if(!window.supabase){status('Cloud library unavailable. Check internet access.');return}
 const sb=window.supabase.createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+window.wealthforgeAuthClient = sb;
 const groups=['customers','drafts','workflows','assets','goals','cash'];
 const types={customers:'customer',drafts:'draft',workflows:'workflow',assets:'asset',goals:'goal',cash:'cash'};
 const reverse=Object.fromEntries(Object.entries(types).map(([k,v])=>[v,k]));
