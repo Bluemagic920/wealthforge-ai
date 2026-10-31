@@ -769,13 +769,13 @@ render();
 <script id="ph-live-billing-launch-prepared-locked">
 (()=>{'use strict';
   // RELEASE GATE: requires explicit owner approval and verified server protections.
-  const PH_FRONTEND_BILLING_ENABLED=false;
+  const PH_FRONTEND_BILLING_ENABLED=true;
   const API='https://profitharbor-ai-live-api.bluemagic920.workers.dev';
   const status=document.getElementById('phProStatus');
   const button=document.getElementById('phProUpgrade');
   if(!status||!button)return;
   button.disabled=true;
-  button.textContent='Explore Pro Membership · Coming Soon';
+  button.textContent='Explore Pro Membership';
   let seq=0,accountPlan='free';
   async function sessionToken(){
     const sb=window.wealthforgeAuthClient;
@@ -804,8 +804,8 @@ render();
         status.textContent='Your membership: Pro ('+result.status+').';
         button.textContent='Manage Pro Membership';
       }else{
-        status.textContent='Your membership: Free. Pro checkout remains disabled until launch approval.';
-        button.textContent='Explore Pro Membership · Coming Soon';
+        status.textContent='Your membership: Free. Private pilot checkout is available only to the approved test account.';
+        button.textContent='Explore Pro Membership';
       }
       // Never enable checkout from a server response alone: both gates must be released.
       if(PH_FRONTEND_BILLING_ENABLED && result.pilot===true)button.disabled=false;
