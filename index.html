@@ -90,7 +90,7 @@ button.ph-gear:focus-visible{color:#d6b66c!important;text-decoration:underline;t
 <div class="actions"><button type="button" class="primary" id="billSave">Save draft locally</button><button type="button" id="billPrint">View branded PDF / Print</button><button type="button" id="billEmail" disabled title="Requires verified customer email workflow">Email to customer (coming next)</button><button type="button" id="billReset">New document</button></div>
 <p id="billStatus" class="note" role="status"></p>
 <h3>Saved documents (this browser)</h3><div class="actions"><button type="button" id="billCloudUpload">Save local drafts to cloud</button><button type="button" id="billCloudDownload">Load my cloud drafts</button></div><p id="billCloudStatus" class="note" role="status" aria-live="polite">Cloud sync is manual in this testing build.</p><div class="table-wrap"><table><thead><tr><th>Number</th><th>Customer</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead><tbody id="billSaved"></tbody></table></div>
-</div></section><section id="emailsettings" class="hidden"><div class="panel"><h2>Email Settings · Signature Designer</h2><p class="note">Stage 2: save your business signature securely to your account. Outgoing email signatures are not enabled yet.</p><div class="grid"><label>Full name<input id="sigName" maxlength="100" placeholder="Your name"></label><label>Job title<input id="sigTitle" maxlength="100" placeholder="Owner"></label><label>Company<input id="sigCompany" maxlength="120" placeholder="Your company"></label><label>Phone<input id="sigPhone" maxlength="50" placeholder="555-555-5555"></label><label>Website<input id="sigWebsite" maxlength="200" placeholder="https://example.com"></label><label>Closing<input id="sigClosing" maxlength="120" value="Best regards,"></label><label>Font<select id="sigFont"><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Verdana, sans-serif">Verdana</option><option value="Tahoma, sans-serif">Tahoma</option></select></label><label>Font size<select id="sigSize"><option value="12">12 px</option><option value="14" selected>14 px</option><option value="16">16 px</option><option value="18">18 px</option></select></label><label>Text color<select id="sigColor"><option value="#173a63">Navy</option><option value="#222222">Black</option><option value="#087f80">Teal</option></select></label><label>Company logo (PNG/JPG/WebP, up to 5 MB)<input id="sigLogo" type="file" accept="image/png,image/jpeg,image/webp"></label></div><label>Custom signature message<textarea id="sigMessage" maxlength="1000" placeholder="Thank you for your business."></textarea></label><div class="actions"><button type="button" class="primary" id="phSettingsSave">Save business settings to cloud</button><button type="button" id="phSettingsLoad">Load my saved settings</button></div><p id="phSettingsCloudStatus" class="note" role="status" aria-live="polite">Sign in under Account to save settings.</p><div id="phStoredLogo" class="hidden"><p class="note">Saved company logo:</p><img id="phStoredLogoImage" alt="Your saved company logo" style="max-width:220px;max-height:110px;object-fit:contain"></div><h3>Signature preview</h3><div id="sigPreview" style="background:#fff;color:#222;border-radius:12px;padding:20px;min-height:130px;overflow-wrap:anywhere" aria-live="polite"></div><p class="note" id="sigStatus" role="status">Signature preview — use Save to store your settings.</p><div class="actions"><button type="button" id="sigClearLogo">Remove preview logo</button></div></div></section><section id="history" class="hidden"><div class="ph-history-shell"><div class="ph-history-head"><div><div class="ph-history-kicker">ProfitHarbor · Relationship Intelligence</div><h2>Customer interaction history</h2><p class="note">A private, chronological record of your customer conversations and next steps.</p></div></div><label>Customer<select id="phHistoryCustomer"></select></label><form id="phHistoryForm"><div class="ph-history-fields"><label>Interaction type<select id="phHistoryType"><option>Call</option><option>Meeting</option><option>Email</option><option>Note</option><option>Follow-up</option></select></label><label>Date and time<input id="phHistoryWhen" type="datetime-local" required></label><label class="ph-history-wide">Summary<textarea id="phHistorySummary" maxlength="3000" placeholder="What was discussed, agreed, or decided?" required></textarea></label><label class="ph-history-wide">Next action (optional)<input id="phHistoryNext" maxlength="300" placeholder="Send revised proposal next Tuesday"></label></div><button type="submit" class="primary">Save interaction</button></form><p id="phHistoryFeedback" class="ph-history-feedback" role="status"></p><div class="panel" id="phAuditPanel" style="margin-top:22px;border-color:#538c96"><div class="ph-history-head"><div><h3>Protected sent-email audit</h3><p class="note">Server-side email submission records, including unsuccessful or uncertain attempts. Subscriber accounts cannot edit or delete these records. Provider acceptance does not prove delivery. Records remain accessible here even after a customer is deleted.</p></div><div class="actions"><button type="button" id="phAuditRefresh">Refresh audit</button><button type="button" id="phAuditAll">All customers</button></div></div><p class="ph-history-feedback" id="phAuditStatus" role="status">Sign in to load protected email records.</p><div id="phAuditTimeline" class="ph-history-timeline" aria-live="polite"></div></div><h3>Editable relationship timeline</h3><div id="phHistoryTimeline" class="ph-history-timeline" aria-live="polite"></div><div class="ph-intel" id="phIntelligence" aria-label="Customer intelligence workspace"><div class="ph-intel-kicker">ProfitHarbor · Relationship Intelligence</div><h3>Customer intelligence</h3><p class="note">A concise relationship briefing, suggested next move, and professional message draft—based on your saved activity. Suggestions are generated in your browser; nothing is sent to AI automatically.</p><div class="ph-intel-grid"><div class="ph-intel-card"><strong>Relationship pulse</strong><p id="phIntelPulse">Select a customer to see a briefing.</p></div><div class="ph-intel-card"><strong>Suggested next move</strong><p id="phIntelNext">Recommendations appear here.</p></div><div class="ph-intel-card"><strong>Opportunity signal</strong><p id="phIntelOpportunity">Opportunity context appears here.</p></div></div><label for="phIntelDraft">Professional follow-up draft</label><textarea id="phIntelDraft" class="ph-intel-preview" maxlength="3000" aria-label="Editable follow-up draft"></textarea><div class="ph-intel-actions"><button type="button" class="primary" id="phIntelGenerate">Refresh briefing &amp; draft</button><button type="button" id="phIntelCopy">Copy draft</button><button type="button" id="phIntelAI">Prepare anonymized AI guidance</button></div><p class="muted" id="phIntelFeedback" role="status">Drafts are not sent to customers. AI guidance opens the existing assistant with a reviewable prompt that excludes names, email addresses, and interaction text.</p></div></div></section><section id="followups" class="hidden"><div class="panel"><h2>🔔 Smart Customer Follow-Up Manager</h2><p class="note">Set reminders linked to your customers. Due and overdue reminders appear here and on the dashboard. Browser notifications are optional and work only while this page is open; email notifications are not enabled yet.</p><form id="reminderForm"><div class="grid"><label>Customer<select id="reminderCustomer" required></select></label><label>Follow-up date and time<input id="reminderWhen" type="datetime-local" required></label><label>Follow-up reason<input id="reminderReason" maxlength="240" required placeholder="Call about proposal"></label></div><button class="primary" type="submit">Save follow-up reminder</button> <button type="button" id="allowNotifications">Enable browser notifications</button></form><p class="note" id="reminderStatus" role="status"></p></div><div class="panel"><h2>Follow-ups needing attention</h2><div class="grid"><div class="panel"><div class="muted">Overdue</div><div class="stat" id="overdueCount">0</div></div><div class="panel"><div class="muted">Due today</div><div class="stat" id="todayCount">0</div></div><div class="panel"><div class="muted">Upcoming</div><div class="stat" id="upcomingCount">0</div></div></div><div id="reminderList"></div></div><div class="panel"><h2>Follow-up draft generator</h2><p class="note">Template-based demo; does not call an AI model or send messages.</p><label>Customer<select id="draftCustomer"></select></label><label>Tone<select id="tone"><option>Friendly</option><option>Professional</option><option>Concise</option></select></label><label>Purpose<select id="purpose"><option>Initial outreach</option><option>Check-in</option><option>Proposal follow-up</option></select></label><div class="actions"><button class="primary" id="generate">Generate draft</button><button id="saveDraft">Save draft</button><button id="copyDraft">Copy text</button></div><textarea id="draftText" aria-label="Generated draft"></textarea></div><div class="panel"><h2>Saved drafts</h2><div id="draftList"></div></div></section><section id="workflows" class="hidden"><div class="panel"><h2>Workflow planner</h2><p class="note">These workflows are planning templates only. They do not run automatically or contact customers.</p><div class="grid"><div class="panel"><h3>New lead follow-up</h3><p>Draft a personalized welcome message after a new lead is recorded.</p><button data-workflow="New lead follow-up">Add to plan</button></div><div class="panel"><h3>Proposal reminder</h3><p>Plan a reminder after a proposal has been shared.</p><button data-workflow="Proposal reminder">Add to plan</button></div><div class="panel"><h3>Customer check-in</h3><p>Schedule a manual customer relationship review.</p><button data-workflow="Customer check-in">Add to plan</button></div></div><h3>Planned workflows</h3><div id="workflowList"></div></div></section>
+</div></section><section id="emailsettings" class="hidden"><div class="panel"><h2>Email Settings · Signature Designer</h2><p class="note">Save business branding and sender preferences securely to your account. Sender verification and outgoing signatures are not enabled yet.</p><div class="grid"><label>Full name<input id="sigName" maxlength="100" placeholder="Your name"></label><label>Job title<input id="sigTitle" maxlength="100" placeholder="Owner"></label><label>Company<input id="sigCompany" maxlength="120" placeholder="Your company"></label><label>Phone<input id="sigPhone" maxlength="50" placeholder="555-555-5555"></label><label>Website<input id="sigWebsite" maxlength="200" placeholder="https://example.com"></label><label>Closing<input id="sigClosing" maxlength="120" value="Best regards,"></label><label>Font<select id="sigFont"><option value="Arial, sans-serif">Arial</option><option value="Georgia, serif">Georgia</option><option value="Verdana, sans-serif">Verdana</option><option value="Tahoma, sans-serif">Tahoma</option></select></label><label>Font size<select id="sigSize"><option value="12">12 px</option><option value="14" selected>14 px</option><option value="16">16 px</option><option value="18">18 px</option></select></label><label>Text color<select id="sigColor"><option value="#173a63">Navy</option><option value="#222222">Black</option><option value="#087f80">Teal</option></select></label><label>Company logo (PNG/JPG/WebP, up to 5 MB)<input id="sigLogo" type="file" accept="image/png,image/jpeg,image/webp"></label></div><label>Custom signature message<textarea id="sigMessage" maxlength="1000" placeholder="Thank you for your business."></textarea></label><div class="actions"><button type="button" class="primary" id="phSettingsSave">Save business settings to cloud</button><button type="button" id="phSettingsLoad">Load my saved settings</button></div><p id="phSettingsCloudStatus" class="note" role="status" aria-live="polite">Sign in under Account to save settings.</p><div id="phStoredLogo" class="hidden"><p class="note">Saved company logo:</p><img id="phStoredLogoImage" alt="Your saved company logo" style="max-width:220px;max-height:110px;object-fit:contain"></div><div class="panel" style="margin-top:20px;border:1px solid #315c79"><h3>Business-branded sender · v2.4 preview</h3><p class="note">Configure how your business should appear to customers. This stage saves preferences only. Sender verification, customer delivery, and attachment sending are NOT enabled.</p><div class="grid"><label>Sender option<select id="phSenderMode"><option value="managed">ProfitHarbor-managed sender (planned)</option><option value="domain">My verified business domain (planned)</option></select></label><label>Sender display name<input id="phSenderName" maxlength="120" placeholder="Your business name"></label><label>Requested business sender email<input id="phSenderAddress" type="email" maxlength="254" placeholder="invoices@yourbusiness.com"></label><label>Reply-to email<input id="phReplyTo" type="email" maxlength="254" placeholder="you@yourbusiness.com"></label></div><p id="phSenderGuidance" class="note" role="status"></p><div style="padding:14px;background:#fff;color:#173a63;border-radius:10px"><strong>Customer inbox preview (illustrative only)</strong><p id="phSenderPreview" style="overflow-wrap:anywhere"></p><small id="phSenderPreviewDisclaimer">No sender has been verified or authorized. This is not an actual sent email.</small></div></div><h3>Signature preview</h3><div id="sigPreview" style="background:#fff;color:#222;border-radius:12px;padding:20px;min-height:130px;overflow-wrap:anywhere" aria-live="polite"></div><p class="note" id="sigStatus" role="status">Signature preview — use Save to store your settings.</p><div class="actions"><button type="button" id="sigClearLogo">Remove preview logo</button></div></div></section><section id="history" class="hidden"><div class="ph-history-shell"><div class="ph-history-head"><div><div class="ph-history-kicker">ProfitHarbor · Relationship Intelligence</div><h2>Customer interaction history</h2><p class="note">A private, chronological record of your customer conversations and next steps.</p></div></div><label>Customer<select id="phHistoryCustomer"></select></label><form id="phHistoryForm"><div class="ph-history-fields"><label>Interaction type<select id="phHistoryType"><option>Call</option><option>Meeting</option><option>Email</option><option>Note</option><option>Follow-up</option></select></label><label>Date and time<input id="phHistoryWhen" type="datetime-local" required></label><label class="ph-history-wide">Summary<textarea id="phHistorySummary" maxlength="3000" placeholder="What was discussed, agreed, or decided?" required></textarea></label><label class="ph-history-wide">Next action (optional)<input id="phHistoryNext" maxlength="300" placeholder="Send revised proposal next Tuesday"></label></div><button type="submit" class="primary">Save interaction</button></form><p id="phHistoryFeedback" class="ph-history-feedback" role="status"></p><div class="panel" id="phAuditPanel" style="margin-top:22px;border-color:#538c96"><div class="ph-history-head"><div><h3>Protected sent-email audit</h3><p class="note">Server-side email submission records, including unsuccessful or uncertain attempts. Subscriber accounts cannot edit or delete these records. Provider acceptance does not prove delivery. Records remain accessible here even after a customer is deleted.</p></div><div class="actions"><button type="button" id="phAuditRefresh">Refresh audit</button><button type="button" id="phAuditAll">All customers</button></div></div><p class="ph-history-feedback" id="phAuditStatus" role="status">Sign in to load protected email records.</p><div id="phAuditTimeline" class="ph-history-timeline" aria-live="polite"></div></div><h3>Editable relationship timeline</h3><div id="phHistoryTimeline" class="ph-history-timeline" aria-live="polite"></div><div class="ph-intel" id="phIntelligence" aria-label="Customer intelligence workspace"><div class="ph-intel-kicker">ProfitHarbor · Relationship Intelligence</div><h3>Customer intelligence</h3><p class="note">A concise relationship briefing, suggested next move, and professional message draft—based on your saved activity. Suggestions are generated in your browser; nothing is sent to AI automatically.</p><div class="ph-intel-grid"><div class="ph-intel-card"><strong>Relationship pulse</strong><p id="phIntelPulse">Select a customer to see a briefing.</p></div><div class="ph-intel-card"><strong>Suggested next move</strong><p id="phIntelNext">Recommendations appear here.</p></div><div class="ph-intel-card"><strong>Opportunity signal</strong><p id="phIntelOpportunity">Opportunity context appears here.</p></div></div><label for="phIntelDraft">Professional follow-up draft</label><textarea id="phIntelDraft" class="ph-intel-preview" maxlength="3000" aria-label="Editable follow-up draft"></textarea><div class="ph-intel-actions"><button type="button" class="primary" id="phIntelGenerate">Refresh briefing &amp; draft</button><button type="button" id="phIntelCopy">Copy draft</button><button type="button" id="phIntelAI">Prepare anonymized AI guidance</button></div><p class="muted" id="phIntelFeedback" role="status">Drafts are not sent to customers. AI guidance opens the existing assistant with a reviewable prompt that excludes names, email addresses, and interaction text.</p></div></div></section><section id="followups" class="hidden"><div class="panel"><h2>🔔 Smart Customer Follow-Up Manager</h2><p class="note">Set reminders linked to your customers. Due and overdue reminders appear here and on the dashboard. Browser notifications are optional and work only while this page is open; email notifications are not enabled yet.</p><form id="reminderForm"><div class="grid"><label>Customer<select id="reminderCustomer" required></select></label><label>Follow-up date and time<input id="reminderWhen" type="datetime-local" required></label><label>Follow-up reason<input id="reminderReason" maxlength="240" required placeholder="Call about proposal"></label></div><button class="primary" type="submit">Save follow-up reminder</button> <button type="button" id="allowNotifications">Enable browser notifications</button></form><p class="note" id="reminderStatus" role="status"></p></div><div class="panel"><h2>Follow-ups needing attention</h2><div class="grid"><div class="panel"><div class="muted">Overdue</div><div class="stat" id="overdueCount">0</div></div><div class="panel"><div class="muted">Due today</div><div class="stat" id="todayCount">0</div></div><div class="panel"><div class="muted">Upcoming</div><div class="stat" id="upcomingCount">0</div></div></div><div id="reminderList"></div></div><div class="panel"><h2>Follow-up draft generator</h2><p class="note">Template-based demo; does not call an AI model or send messages.</p><label>Customer<select id="draftCustomer"></select></label><label>Tone<select id="tone"><option>Friendly</option><option>Professional</option><option>Concise</option></select></label><label>Purpose<select id="purpose"><option>Initial outreach</option><option>Check-in</option><option>Proposal follow-up</option></select></label><div class="actions"><button class="primary" id="generate">Generate draft</button><button id="saveDraft">Save draft</button><button id="copyDraft">Copy text</button></div><textarea id="draftText" aria-label="Generated draft"></textarea></div><div class="panel"><h2>Saved drafts</h2><div id="draftList"></div></div></section><section id="workflows" class="hidden"><div class="panel"><h2>Workflow planner</h2><p class="note">These workflows are planning templates only. They do not run automatically or contact customers.</p><div class="grid"><div class="panel"><h3>New lead follow-up</h3><p>Draft a personalized welcome message after a new lead is recorded.</p><button data-workflow="New lead follow-up">Add to plan</button></div><div class="panel"><h3>Proposal reminder</h3><p>Plan a reminder after a proposal has been shared.</p><button data-workflow="Proposal reminder">Add to plan</button></div><div class="panel"><h3>Customer check-in</h3><p>Schedule a manual customer relationship review.</p><button data-workflow="Customer check-in">Add to plan</button></div></div><h3>Planned workflows</h3><div id="workflowList"></div></div></section>
 <section id="wealth" class="hidden">
  <div class="grid">
   <div class="panel"><div class="muted">Net worth (entered values)</div><div class="stat" id="netWorth">$0</div></div>
@@ -448,7 +448,7 @@ get('sigClearLogo').addEventListener('click',()=>{if(logoUrl)URL.revokeObjectURL
 <script id="ph-secure-settings-stage2">
 (()=>{'use strict';
  const $=id=>document.getElementById(id), status=$('phSettingsCloudStatus');
- const ids=['sigName','sigTitle','sigCompany','sigPhone','sigWebsite','sigClosing','sigFont','sigSize','sigColor','sigMessage'];
+ const ids=['sigName','sigTitle','sigCompany','sigPhone','sigWebsite','sigClosing','sigFont','sigSize','sigColor','sigMessage','phSenderMode','phSenderName','phSenderAddress','phReplyTo'];
  const bucket='ph-company-logos';
  let signedUrl=null;
  const client=async()=>{
@@ -556,12 +556,126 @@ $('billReset').onclick=()=>{refreshCustomers();reset()};
 $('billPrint').onclick=()=>{let d;try{d=current()}catch(e){$('billStatus').textContent=e.message;return}
  const lines=d.lines.map(i=>`<tr><td>${escape(i.description)}</td><td>${i.quantity}</td><td>${money(i.price)}</td><td>${money(i.quantity*i.price)}</td></tr>`).join('');
  const w=window.open('','_blank');if(!w){$('billStatus').textContent='Allow popups to print.';return}
- w.document.write(`<!doctype html><html><head><title>${escape(d.type)} Preview</title><style>body{font:15px Arial,sans-serif;margin:48px;color:#162b40}h1{color:#103c5a}table{width:100%;border-collapse:collapse;margin-top:28px}th,td{padding:12px;text-align:left;border-bottom:1px solid #ccd}footer{margin-top:35px}button{padding:10px 20px}@media print{button{display:none}}</style></head><body><h1>${escape(d.type)} · Preview</h1><p><b>Customer:</b> ${escape(d.customer.name)}<br><b>Email:</b> ${escape(d.customer.email)}<br><b>Issue:</b> ${escape(d.issue)}<br><b>Due / valid until:</b> ${escape(d.due)}</p><table><thead><tr><th>Description</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody>${lines}</tbody></table><p style="text-align:right">Subtotal: ${money(d.subtotal)}<br>Tax: ${money(d.tax)}<br><strong>Total: ${money(d.total)}</strong></p><footer><b>Terms:</b><p>${escape(d.notes).replace(/\n/g,'<br>')}</p><p>Preview only — not a sent or finalized document.</p></footer><button onclick="print()">Print / Save as PDF</button></body></html>`);w.document.close();
+ w.document.write(`<!doctype html><html><head><title>${escape(d.type)} Preview</title><style>body{font:15px Arial,sans-serif;margin:48px;color:#162b40}h1{color:#103c5a}table{width:100%;border-collapse:collapse;margin-top:28px}th,td{padding:12px;text-align:left;border-bottom:1px solid #ccd}footer{margin-top:35px}button{padding:10px 20px}@media print{button{display:none}}</style></head><body><h1>${escape(d.type)} · Preview</h1><p><b>Customer:</b> ${escape(d.customer.name)}<br><b>Email:</b> ${escape(d.customer.email)}<br><b>Issue:</b> ${escape(d.issue)}<br><b>Due / valid until:</b> ${escape(d.due)}</p><table><thead><tr><th>Description</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody>${lines}</tbody></table><p style="text-align:right">Subtotal: ${money(d.subtotal)}<br>Tax: ${money(d.tax)}<br><strong>Total: ${money(d.total)}</strong></p><footer><b>Terms:</b><p>${escape(d.notes).replace(/\n/g,'<br>')}</p><p>Preview only — not a sent or finalized document.</p></footer><button onclick="print()">Print / Save as PDF</button>
+<script id="ph-business-settings-auto-load-v241">
+(()=>{'use strict';
+ const fieldIds=['sigName','sigTitle','sigCompany','sigPhone','sigWebsite','sigClosing',
+ 'sigFont','sigSize','sigColor','sigMessage','phSenderMode','phSenderName',
+ 'phSenderAddress','phReplyTo'];
+ const status=document.getElementById('phSettingsCloudStatus');
+ const loadButton=document.getElementById('phSettingsLoad');
+ if(!status||!loadButton)return;
+ let lastUser=null, busy=false, dirty=false, hooked=false, checks=0;
+ fieldIds.forEach(id=>{
+   const el=document.getElementById(id);
+   el?.addEventListener('input',()=>{dirty=true;});
+   el?.addEventListener('change',()=>{dirty=true;});
+ });
+ document.getElementById('phSettingsSave')?.addEventListener('click',()=>{dirty=false;});
+ loadButton.addEventListener('click',()=>{dirty=false;});
+ async function autoLoad(userId){
+   if(!userId||busy||lastUser===userId)return;
+   if(dirty){status.textContent='Unsaved edits detected. Save or use Load my saved settings to replace them.';return;}
+   busy=true;
+   try{
+     const sb=window.wealthforgeAuthClient;
+     const {data,error}=await sb.from('ph_business_settings')
+       .select('settings,logo_path').eq('user_id',userId).maybeSingle();
+     if(error)throw error;
+     // Only the existing trusted loader applies values and creates the signed logo URL.
+     // Avoid reloading if the user started editing while the request was in flight.
+     if(dirty)return;
+     lastUser=userId;
+     if(!data){status.textContent='No saved business settings yet.';return;}
+     loadButton.click();
+   }catch(e){status.textContent='Automatic load unavailable. Use Load my saved settings. '+e.message;}
+   finally{busy=false;}
+ }
+ async function check(){
+   const sb=window.wealthforgeAuthClient;
+   if(!sb?.auth?.getSession)return;
+   if(!hooked&&typeof sb.auth.onAuthStateChange==='function'){
+     hooked=true;
+     sb.auth.onAuthStateChange((event,session)=>{
+       if(event==='SIGNED_OUT'){lastUser=null;dirty=false;return;}
+       if(event==='SIGNED_IN'||event==='INITIAL_SESSION'||event==='USER_UPDATED'){
+         // Defer Supabase calls until the auth callback has returned.
+         Promise.resolve().then(()=>autoLoad(session?.user?.id));
+       }
+     });
+   }
+   try{
+     const {data,error}=await sb.auth.getSession();
+     if(!error&&data?.session?.user?.id)await autoLoad(data.session.user.id);
+   }catch{}
+ }
+ const interval=setInterval(()=>{check();if(++checks>=60)clearInterval(interval);},500);
+ check();
+})();
+</script>
+</body></html>`);w.document.close();
 };
 document.querySelector('[data-tab="billing"]')?.addEventListener('click',()=>{refreshCustomers();list()});window.addEventListener('wealthforge:changed',refreshCustomers);
 reset();list();
 })();
-</script></body></html>`);w.document.close();
+</script>
+<script id="ph-business-settings-auto-load-v241">
+(()=>{'use strict';
+ const fieldIds=['sigName','sigTitle','sigCompany','sigPhone','sigWebsite','sigClosing',
+ 'sigFont','sigSize','sigColor','sigMessage','phSenderMode','phSenderName',
+ 'phSenderAddress','phReplyTo'];
+ const status=document.getElementById('phSettingsCloudStatus');
+ const loadButton=document.getElementById('phSettingsLoad');
+ if(!status||!loadButton)return;
+ let lastUser=null, busy=false, dirty=false, hooked=false, checks=0;
+ fieldIds.forEach(id=>{
+   const el=document.getElementById(id);
+   el?.addEventListener('input',()=>{dirty=true;});
+   el?.addEventListener('change',()=>{dirty=true;});
+ });
+ document.getElementById('phSettingsSave')?.addEventListener('click',()=>{dirty=false;});
+ loadButton.addEventListener('click',()=>{dirty=false;});
+ async function autoLoad(userId){
+   if(!userId||busy||lastUser===userId)return;
+   if(dirty){status.textContent='Unsaved edits detected. Save or use Load my saved settings to replace them.';return;}
+   busy=true;
+   try{
+     const sb=window.wealthforgeAuthClient;
+     const {data,error}=await sb.from('ph_business_settings')
+       .select('settings,logo_path').eq('user_id',userId).maybeSingle();
+     if(error)throw error;
+     // Only the existing trusted loader applies values and creates the signed logo URL.
+     // Avoid reloading if the user started editing while the request was in flight.
+     if(dirty)return;
+     lastUser=userId;
+     if(!data){status.textContent='No saved business settings yet.';return;}
+     loadButton.click();
+   }catch(e){status.textContent='Automatic load unavailable. Use Load my saved settings. '+e.message;}
+   finally{busy=false;}
+ }
+ async function check(){
+   const sb=window.wealthforgeAuthClient;
+   if(!sb?.auth?.getSession)return;
+   if(!hooked&&typeof sb.auth.onAuthStateChange==='function'){
+     hooked=true;
+     sb.auth.onAuthStateChange((event,session)=>{
+       if(event==='SIGNED_OUT'){lastUser=null;dirty=false;return;}
+       if(event==='SIGNED_IN'||event==='INITIAL_SESSION'||event==='USER_UPDATED'){
+         // Defer Supabase calls until the auth callback has returned.
+         Promise.resolve().then(()=>autoLoad(session?.user?.id));
+       }
+     });
+   }
+   try{
+     const {data,error}=await sb.auth.getSession();
+     if(!error&&data?.session?.user?.id)await autoLoad(data.session.user.id);
+   }catch{}
+ }
+ const interval=setInterval(()=>{check();if(++checks>=60)clearInterval(interval);},500);
+ check();
+})();
+</script>
+</body></html>`);w.document.close();
 };
 document.querySelector('[data-tab="billing"]')?.addEventListener('click',()=>{refreshCustomers();list()});window.addEventListener('wealthforge:changed',refreshCustomers);window.addEventListener('wealthforge:changed',refreshCustomers);
 reset();list();
@@ -597,7 +711,64 @@ function docMarkup(d,b){
  const company=st.sigCompany||'Your Business',name=st.sigName||'',contact=[st.sigPhone,st.sigWebsite].filter(Boolean).map(esc).join(' · ');
  return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(d.number||d.type)} — Document Preview</title><style>
  @page{size:letter;margin:0.7in}*{box-sizing:border-box}body{margin:0;background:#e9eef2;color:#203348;font:14px Arial,Helvetica,sans-serif}.sheet{max-width:820px;margin:28px auto;background:white;padding:48px;box-shadow:0 12px 45px #20334825;min-height:850px}.head{display:flex;justify-content:space-between;gap:24px;align-items:start;border-bottom:3px solid #d2ab54;padding-bottom:25px}.logo{max-width:210px;max-height:95px;object-fit:contain;margin-bottom:10px}.brand{font-size:23px;font-weight:700;color:#123a58}.muted{color:#647588;font-size:12px;line-height:1.7}.doc-title{text-align:right;font-size:30px;font-weight:700;letter-spacing:2px;color:#123a58}.details{display:flex;justify-content:space-between;gap:30px;margin:30px 0}.details div{line-height:1.9}table{width:100%;border-collapse:collapse;margin-top:20px}th{background:#123a58;color:white;text-align:left}td,th{padding:12px 10px;border-bottom:1px solid #e4e8eb}.num{text-align:right}.totals{margin:26px 0 0 auto;max-width:270px}.totals p{display:flex;justify-content:space-between}.grand{font-size:19px;border-top:2px solid #d2ab54;padding-top:14px;font-weight:bold}.notes{margin-top:55px;white-space:pre-wrap}.actions{max-width:820px;margin:20px auto;display:flex;gap:10px}.actions button{padding:11px 18px;background:#123a58;color:white;border:0;border-radius:6px;cursor:pointer}.warn{max-width:820px;margin:12px auto;color:#8b5000}.foot{font-size:11px;color:#6b7888;margin-top:55px}@media print{body{background:white}.sheet{padding:0;margin:0;box-shadow:none;min-height:0}.actions,.warn{display:none}}
- </style></head><body><div class="actions"><button onclick="window.print()">Print / Save as PDF</button><button onclick="window.close()">Close preview</button></div>${b.notice?`<p class="warn">${esc(b.notice)}</p>`:''}<main class="sheet"><header class="head"><div>${b.logo?`<img class="logo" alt="Company logo" src="${b.logo}">`:''}<div class="brand">${esc(company)}</div><div class="muted">${esc(name)}<br>${contact}</div></div><div><div class="doc-title">${esc(d.type).toUpperCase()}</div><div class="muted" style="text-align:right">${esc(d.number||'Unsaved preview')}<br>${esc(d.status||'Draft')}</div></div></header><section class="details"><div><strong>BILL TO</strong><br>${esc(d.customer?.name)}<br>${esc(d.customer?.business||'')}<br>${esc(d.customer?.email||'')}</div><div><strong>Issue date:</strong> ${esc(d.issue)}<br><strong>${d.type==='Quote'?'Valid until':'Due date'}:</strong> ${esc(d.due||'Not specified')}</div></section><table><thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Amount</th></tr></thead><tbody>${lines}</tbody></table><div class="totals"><p><span>Subtotal</span><span>${fmt(d.subtotal)}</span></p><p><span>Tax (${esc(d.taxRate)}%)</span><span>${fmt(d.tax)}</span></p><p class="grand"><span>Total</span><span>${fmt(d.total)}</span></p></div><section class="notes"><strong>Terms &amp; Notes</strong><p>${esc(d.notes||'')}</p></section><p class="foot">Draft preview for review only. Not sent to customer.</p></main></body></html>`;
+ </style></head><body><div class="actions"><button onclick="window.print()">Print / Save as PDF</button><button onclick="window.close()">Close preview</button></div>${b.notice?`<p class="warn">${esc(b.notice)}</p>`:''}<main class="sheet"><header class="head"><div>${b.logo?`<img class="logo" alt="Company logo" src="${b.logo}">`:''}<div class="brand">${esc(company)}</div><div class="muted">${esc(name)}<br>${contact}</div></div><div><div class="doc-title">${esc(d.type).toUpperCase()}</div><div class="muted" style="text-align:right">${esc(d.number||'Unsaved preview')}<br>${esc(d.status||'Draft')}</div></div></header><section class="details"><div><strong>BILL TO</strong><br>${esc(d.customer?.name)}<br>${esc(d.customer?.business||'')}<br>${esc(d.customer?.email||'')}</div><div><strong>Issue date:</strong> ${esc(d.issue)}<br><strong>${d.type==='Quote'?'Valid until':'Due date'}:</strong> ${esc(d.due||'Not specified')}</div></section><table><thead><tr><th>Description</th><th class="num">Qty</th><th class="num">Unit price</th><th class="num">Amount</th></tr></thead><tbody>${lines}</tbody></table><div class="totals"><p><span>Subtotal</span><span>${fmt(d.subtotal)}</span></p><p><span>Tax (${esc(d.taxRate)}%)</span><span>${fmt(d.tax)}</span></p><p class="grand"><span>Total</span><span>${fmt(d.total)}</span></p></div><section class="notes"><strong>Terms &amp; Notes</strong><p>${esc(d.notes||'')}</p></section><p class="foot">Draft preview for review only. Not sent to customer.</p></main>
+<script id="ph-business-settings-auto-load-v241">
+(()=>{'use strict';
+ const fieldIds=['sigName','sigTitle','sigCompany','sigPhone','sigWebsite','sigClosing',
+ 'sigFont','sigSize','sigColor','sigMessage','phSenderMode','phSenderName',
+ 'phSenderAddress','phReplyTo'];
+ const status=document.getElementById('phSettingsCloudStatus');
+ const loadButton=document.getElementById('phSettingsLoad');
+ if(!status||!loadButton)return;
+ let lastUser=null, busy=false, dirty=false, hooked=false, checks=0;
+ fieldIds.forEach(id=>{
+   const el=document.getElementById(id);
+   el?.addEventListener('input',()=>{dirty=true;});
+   el?.addEventListener('change',()=>{dirty=true;});
+ });
+ document.getElementById('phSettingsSave')?.addEventListener('click',()=>{dirty=false;});
+ loadButton.addEventListener('click',()=>{dirty=false;});
+ async function autoLoad(userId){
+   if(!userId||busy||lastUser===userId)return;
+   if(dirty){status.textContent='Unsaved edits detected. Save or use Load my saved settings to replace them.';return;}
+   busy=true;
+   try{
+     const sb=window.wealthforgeAuthClient;
+     const {data,error}=await sb.from('ph_business_settings')
+       .select('settings,logo_path').eq('user_id',userId).maybeSingle();
+     if(error)throw error;
+     // Only the existing trusted loader applies values and creates the signed logo URL.
+     // Avoid reloading if the user started editing while the request was in flight.
+     if(dirty)return;
+     lastUser=userId;
+     if(!data){status.textContent='No saved business settings yet.';return;}
+     loadButton.click();
+   }catch(e){status.textContent='Automatic load unavailable. Use Load my saved settings. '+e.message;}
+   finally{busy=false;}
+ }
+ async function check(){
+   const sb=window.wealthforgeAuthClient;
+   if(!sb?.auth?.getSession)return;
+   if(!hooked&&typeof sb.auth.onAuthStateChange==='function'){
+     hooked=true;
+     sb.auth.onAuthStateChange((event,session)=>{
+       if(event==='SIGNED_OUT'){lastUser=null;dirty=false;return;}
+       if(event==='SIGNED_IN'||event==='INITIAL_SESSION'||event==='USER_UPDATED'){
+         // Defer Supabase calls until the auth callback has returned.
+         Promise.resolve().then(()=>autoLoad(session?.user?.id));
+       }
+     });
+   }
+   try{
+     const {data,error}=await sb.auth.getSession();
+     if(!error&&data?.session?.user?.id)await autoLoad(data.session.user.id);
+   }catch{}
+ }
+ const interval=setInterval(()=>{check();if(++checks>=60)clearInterval(interval);},500);
+ check();
+})();
+</script>
+</body></html>`;
 }
 async function preview(d){
  const w=window.open('','_blank');if(!w){$('billStatus').textContent='Please allow pop-ups for PDF preview.';return;}
@@ -678,6 +849,80 @@ $('billCloudDownload').onclick=()=>run($('billCloudDownload'),async()=>{
  // Refresh the existing document list without overwriting the editor.
  document.querySelector('[data-tab="billing"]')?.click();
 });
+})();
+</script>
+<script id="ph-branded-sender-stage1">
+(()=>{'use strict';
+const el=id=>document.getElementById(id);
+const ids=['phSenderMode','phSenderName','phSenderAddress','phReplyTo'];
+function render(){
+ const mode=el('phSenderMode').value;
+ const name=el('phSenderName').value.trim()||el('sigCompany').value.trim()||'Your Business';
+ const addr=el('phSenderAddress').value.trim();
+ const reply=el('phReplyTo').value.trim();
+ const display=mode==='domain'?(addr||'invoices@yourbusiness.com'):'ProfitHarbor-managed address (not yet assigned)';
+ el('phSenderPreview').textContent=name+' <'+display+'> | Reply-To: '+(reply||'Not configured');
+ el('phSenderGuidance').textContent=mode==='domain'?'Domain option requires verified domain ownership, approved DNS records, and server authorization before sending.':'Managed option will use a clearly identified ProfitHarbor sending domain; the subscriber business name may be displayed, with an authorized Reply-To address.';
+}
+ids.concat(['sigCompany']).forEach(id=>el(id).addEventListener('input',render));
+el('phSettingsLoad').addEventListener('click',()=>setTimeout(render,0));
+render();
+})();
+</script>
+<script id="ph-business-settings-auto-load-v241">
+(()=>{'use strict';
+ const fieldIds=['sigName','sigTitle','sigCompany','sigPhone','sigWebsite','sigClosing',
+ 'sigFont','sigSize','sigColor','sigMessage','phSenderMode','phSenderName',
+ 'phSenderAddress','phReplyTo'];
+ const status=document.getElementById('phSettingsCloudStatus');
+ const loadButton=document.getElementById('phSettingsLoad');
+ if(!status||!loadButton)return;
+ let lastUser=null, busy=false, dirty=false, hooked=false, checks=0;
+ fieldIds.forEach(id=>{
+   const el=document.getElementById(id);
+   el?.addEventListener('input',()=>{dirty=true;});
+   el?.addEventListener('change',()=>{dirty=true;});
+ });
+ document.getElementById('phSettingsSave')?.addEventListener('click',()=>{dirty=false;});
+ loadButton.addEventListener('click',()=>{dirty=false;});
+ async function autoLoad(userId){
+   if(!userId||busy||lastUser===userId)return;
+   if(dirty){status.textContent='Unsaved edits detected. Save or use Load my saved settings to replace them.';return;}
+   busy=true;
+   try{
+     const sb=window.wealthforgeAuthClient;
+     const {data,error}=await sb.from('ph_business_settings')
+       .select('settings,logo_path').eq('user_id',userId).maybeSingle();
+     if(error)throw error;
+     // Only the existing trusted loader applies values and creates the signed logo URL.
+     // Avoid reloading if the user started editing while the request was in flight.
+     if(dirty)return;
+     lastUser=userId;
+     if(!data){status.textContent='No saved business settings yet.';return;}
+     loadButton.click();
+   }catch(e){status.textContent='Automatic load unavailable. Use Load my saved settings. '+e.message;}
+   finally{busy=false;}
+ }
+ async function check(){
+   const sb=window.wealthforgeAuthClient;
+   if(!sb?.auth?.getSession)return;
+   if(!hooked&&typeof sb.auth.onAuthStateChange==='function'){
+     hooked=true;
+     sb.auth.onAuthStateChange((event,session)=>{
+       if(event==='SIGNED_OUT'){lastUser=null;dirty=false;return;}
+       if(event==='SIGNED_IN'||event==='INITIAL_SESSION'||event==='USER_UPDATED'){
+         // Defer Supabase calls until the auth callback has returned.
+         Promise.resolve().then(()=>autoLoad(session?.user?.id));
+       }
+     });
+   }
+   try{
+     const {data,error}=await sb.auth.getSession();
+     if(!error&&data?.session?.user?.id)await autoLoad(data.session.user.id);
+   }catch{}
+ }
+ const interval=setInterval(()=>{check();if(++checks>=60)clearInterval(interval);},500);
+ check();
 })();
 </script>
 </body></html>
