@@ -797,6 +797,7 @@ render();
         status.textContent='Secure billing connection reached. Live billing is not activated; no payment can be taken.';
         return;
       }
+      if(response.status===403){status.textContent='Pro membership is not open for public checkout yet.';return;}
       if(!response.ok){status.textContent='Membership status unavailable (HTTP '+response.status+'). Checkout remains disabled.';return;}
       accountPlan=result.plan==='pro'&&['active','trialing'].includes(result.status)?'pro':'free';
       if(accountPlan==='pro'){
@@ -807,7 +808,7 @@ render();
         button.textContent='Explore Pro Membership · Coming Soon';
       }
       // Never enable checkout from a server response alone: both gates must be released.
-      if(PH_FRONTEND_BILLING_ENABLED)button.disabled=false;
+      if(PH_FRONTEND_BILLING_ENABLED && result.pilot===true)button.disabled=false;
     }catch(e){if(current===seq)status.textContent=(e.message==='Sign in under Account first.'?'Sign in to check membership. ':'Secure billing connection unavailable. ')+'Checkout remains disabled.';}
   }
   button.addEventListener('click',async()=>{
