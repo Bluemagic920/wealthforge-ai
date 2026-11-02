@@ -1,0 +1,1 @@
+document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>{const target=b.dataset.go;document.querySelectorAll("main>section").forEach(x=>x.classList.toggle("hidden",x.id!==target));document.querySelectorAll(".tabs [data-tab]").forEach(x=>x.classList.remove("active"));document.getElementById(target)?.scrollIntoView({block:"start"});}));

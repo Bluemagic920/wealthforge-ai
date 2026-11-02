@@ -1,0 +1,1 @@
+ProfitHarbor AI v0.5.19 local test: fixed ph-inline-14.js to recognize the Cloudflare Worker owner entitlement (role=owner and lifetime_pro=true). No Worker, Stripe, or Supabase settings changed. Test with signed-in owner account. If still not recognized, verify the owner_entitlements database row and billing/status response. DO NOT publish without verification.

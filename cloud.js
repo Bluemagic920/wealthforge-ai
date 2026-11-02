@@ -122,14 +122,10 @@ $('cloudDownload').onclick=async()=>{
 
 // Explicit recovery: discard the stale local snapshot and replace it with the
 // complete current cloud snapshot. Never merge or auto-upload during recovery.
-const cloudBackup=document.createElement('button');
-cloudBackup.textContent='Export JSON backup';
-$('cloudDownload').parentElement.appendChild(cloudBackup);
-cloudBackup.onclick=()=>document.getElementById('export').click();
 const keepCloud=document.createElement('button');
 keepCloud.textContent='Keep Cloud Version (discard local changes)';
 keepCloud.style.marginLeft='8px';
-$('cloudDownload').parentElement.appendChild(keepCloud);
+document.getElementById('phManualCloudActions').appendChild(keepCloud);
 keepCloud.onclick=async()=>{
  if(!user)return status('Sign in first.');
  if(!confirm('Have you exported a JSON backup? This will DISCARD unsynced local changes and load the current cloud records.'))return;
