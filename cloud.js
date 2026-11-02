@@ -11,6 +11,7 @@ const types={customers:'customer',drafts:'draft',workflows:'workflow',assets:'as
 const reverse=Object.fromEntries(Object.entries(types).map(([k,v])=>[v,k]));
 const blank=()=>Object.fromEntries(groups.map(g=>[g,[]]));
 let user=null,ready=false,busy=false,pending=false,delay=null,epoch=0,conflictLocked=false;
+ window.phCloudSyncReady=()=>Boolean(user&&ready&&!busy&&!conflictLocked);
 const scoped=id=>'wealthforge_user_'+id;
 const baselineKey=id=>'wealthforge_baseline_v142_'+id;
 const fingerprint=x=>JSON.stringify(x);

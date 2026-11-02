@@ -1,5 +1,25 @@
 
-(()=>{'use strict';const KEY=localStorage.getItem('wealthforge_active_user')?'wealthforge_user_'+localStorage.getItem('wealthforge_active_user'):'wealthforge_v1_local';const empty=()=>({customers:[],drafts:[],workflows:[],assets:[],goals:[],cash:[]});let data;try{data=JSON.parse(localStorage.getItem(KEY))||empty()}catch{data=empty()}if(!Array.isArray(data.customers)||!Array.isArray(data.drafts)||!Array.isArray(data.workflows))data=empty();for(const k of ['assets','goals','cash'])if(!Array.isArray(data[k]))data[k]=[];const $=id=>document.getElementById(id);window.phGetCurrentCustomers=()=>Array.isArray(data.customers)?data.customers.map(c=>({...c})):[];const save=()=>{localStorage.setItem(KEY,JSON.stringify(data));render();window.dispatchEvent(new CustomEvent('wealthforge:changed'))};const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(n)||0);document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('main>section').forEach(x=>x.classList.toggle('hidden',x.id!==b.dataset.tab))}));let editingCustomerId=null;
+(()=>{'use strict';const KEY=localStorage.getItem('wealthforge_active_user')?'wealthforge_user_'+localStorage.getItem('wealthforge_active_user'):'wealthforge_v1_local';const empty=()=>({customers:[],drafts:[],workflows:[],assets:[],goals:[],cash:[]});let data;try{data=JSON.parse(localStorage.getItem(KEY))||empty()}catch{data=empty()}if(!Array.isArray(data.customers)||!Array.isArray(data.drafts)||!Array.isArray(data.workflows))data=empty();for(const k of ['assets','goals','cash'])if(!Array.isArray(data[k]))data[k]=[];const $=id=>document.getElementById(id);window.phGetCurrentCustomers=()=>Array.isArray(data.customers)?data.customers.map(c=>({...c})):[];const save=()=>{localStorage.setItem(KEY,JSON.stringify(data));render();window.dispatchEvent(new CustomEvent('wealthforge:changed'))};
+// Stage 11: import ONLY owner-scoped, authenticated real leads on explicit user approval.
+// Uses the normal local save + cloud sync path; never inserts directly into cloud records.
+window.phImportVerifiedRealLeads = function(leads, accountId){
+ if(!accountId||localStorage.getItem('wealthforge_active_user')!==accountId)throw Error('Account changed. Sign in again.');
+ if(window.phCloudSyncReady?.()!==true)throw Error('Cloud sync is not ready. Resolve sync issues before importing.');
+ if(!Array.isArray(leads)||leads.length>100)throw Error('Invalid lead batch.');
+ let added=0,skipped=0;
+ for(const lead of leads){
+  if(!lead||typeof lead.id!=='string'||!/^[0-9a-f-]{36}$/i.test(lead.id)||typeof lead.full_name!=='string'||!lead.full_name.trim()||typeof lead.email!=='string')throw Error('Invalid lead record. No changes made.');
+ }
+ for(const lead of leads){
+  const email=lead.email.trim().toLowerCase();
+  const duplicate=data.customers.some(c=>c.leadSourceId===lead.id||(email&&String(c.email||'').trim().toLowerCase()===email));
+  if(duplicate){skipped++;continue;}
+  data.customers.push({id:crypto.randomUUID(),name:lead.full_name.trim().slice(0,120),email:email.slice(0,254),business:'',value:0,status:'Lead',leadSourceId:lead.id,leadCampaignId:String(lead.campaign_id||''),leadSource:String(lead.source||'other'),leadReceivedAt:String(lead.created_at||'')});added++;
+ }
+ if(added)save();
+ return {added,skipped};
+};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(n)||0);document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('main>section').forEach(x=>x.classList.toggle('hidden',x.id!==b.dataset.tab))}));let editingCustomerId=null;
 function resetCustomerEditor(){
  editingCustomerId=null;$('customerForm').reset();
  $('customerFormHeading').textContent='Add customer';$('customerSaveButton').textContent='Save customer';
