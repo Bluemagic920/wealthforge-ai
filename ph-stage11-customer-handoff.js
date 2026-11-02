@@ -9,6 +9,11 @@ panel.innerHTML='<h3>Real lead inbox · Staging</h3><p class="note">View owner-s
 const controls=document.createElement('div');controls.id='phStage16Controls';
 controls.innerHTML='<h4>Stage 16 · Automatic customer handoff (staging)</h4><label><input id="phStage16Auto" type="checkbox"> Automatically import eligible leads while this tab is open</label><p id="phStage16Status" class="note" role="status">OFF by default. Synthetic test records are never imported. Requires active cloud sync.</p>';
 panel.append(controls);
+// Keep the checkbox and description together despite global website label/input styles.
+const autoLabel=controls.querySelector('label');
+Object.assign(autoLabel.style,{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:'10px',width:'100%',maxWidth:'100%',flexWrap:'nowrap'});
+const autoInput=controls.querySelector('#phStage16Auto');
+Object.assign(autoInput.style,{position:'static',display:'inline-block',flex:'0 0 auto',width:'18px',height:'18px',margin:'0',verticalAlign:'middle'});
 const autoBox=controls.querySelector('#phStage16Auto'),autoStatus=controls.querySelector('#phStage16Status');
 const isSynthetic=l=>/\bstaging\s*test\b|do not contact|synthetic/i.test(String(l.full_name||''))||/@example\.invalid$/i.test(String(l.email||'').trim());
 let autoWorking=false;
@@ -52,7 +57,7 @@ sel.addEventListener('change',()=>{autoBox.checked=false;autoStatus.textContent=
 setInterval(autoImport,30000);
 async function refreshInboxCampaigns(){
  if(document.hidden||busy)return;
- try{await campaigns();}catch(e){stat.textContent=e.message;}
+ try{await campaigns();if(!rows.length){stat.textContent=uuid.test(sel.value)?'Campaign selected. Click Load real leads.':'Choose a campaign to load your real lead inbox.';}}catch(e){stat.textContent=e.message;}
 }
 document.querySelector('[data-tab="leads"]')?.addEventListener('click',refreshInboxCampaigns);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshInboxCampaigns()});
