@@ -3,17 +3,19 @@
 const section=document.getElementById('leads');if(!section)return;
 const api='https://profitharbor-leads-staging.bluemagic920.workers.dev';
 const panel=document.createElement('div');panel.className='panel';panel.id='phRealLeadHandoff';
-panel.innerHTML='<h3>Real lead inbox · Staging</h3><p class="note">View owner-scoped real leads. Import to Customers only after reviewing them. Public collection is still disabled.</p><div class="ph-lead-actions"><label>Campaign <select id="phRealCampaign"><option value="">Choose campaign</option></select></label><button type="button" id="phRealRefresh">Load real leads</button><button type="button" id="phRealImport" disabled>Import reviewed leads into Customers</button></div><p id="phRealStatus" class="note" role="status">Sign in to load your real lead inbox.</p><div id="phRealList"></div>';
+panel.innerHTML='<h3>Real lead inbox · Staging</h3><p class="note">View owner-scoped real leads. Import to Customers only after reviewing them. Public collection is still disabled.</p><div class="ph-lead-actions"><label>Campaign <select id="phRealCampaign"><option value="">Choose campaign</option></select></label><button type="button" id="phRealRefresh">Load real leads</button><button type="button" id="phRealImport" disabled>Import reviewed leads into Customers</button></div><p id="phRealStatus" class="note" role="status">Loading your account…</p><div id="phRealList"></div>';
 // Stage 16: opt-in automatic import while this authenticated browser tab is open.
 // Server-side background import is NOT enabled. Synthetic records are always excluded.
 const controls=document.createElement('div');controls.id='phStage16Controls';
-controls.innerHTML='<h4>Stage 16 · Automatic customer handoff (staging)</h4><label><input id="phStage16Auto" type="checkbox"> Automatically import eligible leads while this tab is open</label><p id="phStage16Status" class="note" role="status">OFF by default. Synthetic test records are never imported. Requires active cloud sync.</p>';
+controls.innerHTML='<h4>Stage 16 · Automatic customer handoff (staging)</h4><div id="phStage16AutoRow"><input id="phStage16Auto" type="checkbox" aria-label="Automatically import eligible leads"><label for="phStage16Auto">Automatically import eligible leads while this tab is open</label></div><p id="phStage16Status" class="note" role="status">OFF by default. Synthetic test records are never imported. Requires active cloud sync.</p>';
 panel.append(controls);
-// Keep the checkbox and description together despite global website label/input styles.
-const autoLabel=controls.querySelector('label');
-Object.assign(autoLabel.style,{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:'10px',width:'100%',maxWidth:'100%',flexWrap:'nowrap'});
+// Isolate the opt-in control from site-wide label/checkbox layout rules.
+const autoRow=controls.querySelector('#phStage16AutoRow');
+Object.assign(autoRow.style,{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:'12px',width:'100%',flexWrap:'nowrap'});
+const autoLabel=autoRow.querySelector('label');
+Object.assign(autoLabel.style,{display:'inline',position:'static',width:'auto',maxWidth:'none',margin:'0',padding:'0',flex:'1 1 auto',textAlign:'left'});
 const autoInput=controls.querySelector('#phStage16Auto');
-Object.assign(autoInput.style,{position:'static',display:'inline-block',flex:'0 0 auto',width:'18px',height:'18px',margin:'0',verticalAlign:'middle'});
+Object.assign(autoInput.style,{appearance:'auto',position:'static',display:'block',float:'none',transform:'none',flex:'0 0 18px',width:'18px',height:'18px',margin:'0',padding:'0',minWidth:'18px',maxWidth:'18px'});
 const autoBox=controls.querySelector('#phStage16Auto'),autoStatus=controls.querySelector('#phStage16Status');
 const isSynthetic=l=>/\bstaging\s*test\b|do not contact|synthetic/i.test(String(l.full_name||''))||/@example\.invalid$/i.test(String(l.email||'').trim());
 let autoWorking=false;
@@ -21,7 +23,7 @@ const report=document.getElementById('phStage8Report');if(report)report.insertAd
 const $=id=>document.getElementById(id), sel=$('phRealCampaign'),stat=$('phRealStatus'),list=$('phRealList'),imp=$('phRealImport');
 let rows=[],owner=null,busy=false;
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-async function auth(){const c=window.wealthforgeAuthClient;if(!c)throw Error('Sign in first.');const {data,error}=await c.auth.getSession();if(error||!data?.session?.access_token||!data.session.user?.id)throw Error('Sign in first.');return {token:data.session.access_token,id:data.session.user.id};}
+async function auth(){const c=window.wealthforgeAuthClient;if(!c)throw Error('Authentication is still loading.');const {data,error}=await c.auth.getSession();if(error)throw Error(error.message||'Authentication check failed.');if(!data?.session?.access_token||!data.session.user?.id)throw Error('Sign in first.');return {token:data.session.access_token,id:data.session.user.id};}
 async function req(path,token){const r=await fetch(api+path,{headers:{Authorization:'Bearer '+token},cache:'no-store'});let j;try{j=await r.json()}catch{throw Error('Invalid API response.')}if(!r.ok)throw Error(j.error||'HTTP '+r.status);return j;}
 function clear(){rows=[];owner=null;list.replaceChildren();imp.disabled=true;}
 async function campaigns(){const a=await auth(),j=await req('/api/leads/campaigns',a.token);const prev=sel.value;sel.replaceChildren(new Option('Choose campaign',''));for(const c of j.campaigns||[])if(uuid.test(c.id))sel.add(new Option(c.name||'Campaign',c.id));if([...sel.options].some(o=>o.value===prev))sel.value=prev;}
@@ -57,7 +59,16 @@ sel.addEventListener('change',()=>{autoBox.checked=false;autoStatus.textContent=
 setInterval(autoImport,30000);
 async function refreshInboxCampaigns(){
  if(document.hidden||busy)return;
- try{await campaigns();if(!rows.length){stat.textContent=uuid.test(sel.value)?'Campaign selected. Click Load real leads.':'Choose a campaign to load your real lead inbox.';}}catch(e){stat.textContent=e.message;}
+ stat.textContent='Loading your account…';
+ try{
+  await campaigns();
+  if(!rows.length)stat.textContent=uuid.test(sel.value)?'Campaign selected. Click Load real leads.':'Choose a campaign to load your real lead inbox.';
+ }catch(e){
+  // Only confirmed authentication failures should show a sign-in instruction.
+  stat.textContent=/sign in first|invalid jwt|session expired|not authenticated/i.test(String(e.message))
+   ?'Sign in to load your real lead inbox.'
+   :'Unable to refresh campaigns: '+e.message;
+ }
 }
 document.querySelector('[data-tab="leads"]')?.addEventListener('click',refreshInboxCampaigns);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshInboxCampaigns()});
