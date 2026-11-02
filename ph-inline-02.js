@@ -9,6 +9,7 @@ window.phImportVerifiedRealLeads = function(leads, accountId){
  let added=0,skipped=0;
  for(const lead of leads){
   if(!lead||typeof lead.id!=='string'||!/^[0-9a-f-]{36}$/i.test(lead.id)||typeof lead.full_name!=='string'||!lead.full_name.trim()||typeof lead.email!=='string')throw Error('Invalid lead record. No changes made.');
+  if(/\bstaging\s*test\b|do not contact|synthetic/i.test(lead.full_name)||/@example\.invalid$/i.test(lead.email.trim()))throw Error('Synthetic staging records cannot be imported. No changes made.');
  }
  for(const lead of leads){
   const email=lead.email.trim().toLowerCase();
