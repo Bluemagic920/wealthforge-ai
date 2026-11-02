@@ -4,7 +4,7 @@ const section=document.getElementById('leads');if(!section)return;
 const api='https://profitharbor-leads-staging.bluemagic920.workers.dev';
 const panel=document.createElement('div');panel.className='panel';panel.id='phRealLeadHandoff';
 panel.innerHTML='<h3>Real lead inbox · Staging</h3><p class="note">View owner-scoped real leads. Import to Customers only after reviewing them. Public collection is still disabled.</p><div class="ph-lead-actions"><label>Campaign <select id="phRealCampaign"><option value="">Choose campaign</option></select></label><button type="button" id="phRealRefresh">Load real leads</button><button type="button" id="phRealImport" disabled>Import reviewed leads into Customers</button></div><p id="phRealStatus" class="note" role="status">Sign in to load your real lead inbox.</p><div id="phRealList"></div>';
-const report=document.getElementById('phStage8Report');if(report)report.insertAdjacentElement('afterend',panel);else section.append(panel);
+const report=document.getElementById('phStage8Report');if(report)report.insertAdjacentElement('beforebegin',panel);else section.append(panel);
 const $=id=>document.getElementById(id), sel=$('phRealCampaign'),stat=$('phRealStatus'),list=$('phRealList'),imp=$('phRealImport');
 let rows=[],owner=null,busy=false;
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -16,5 +16,12 @@ async function load(){if(busy)return;busy=true;clear();stat.textContent='Loading
 $('phRealRefresh').addEventListener('click',load);
 sel.addEventListener('change',()=>{clear();stat.textContent='Click Load real leads.';});
 imp.addEventListener('click',async()=>{if(busy||!rows.length||!owner)return;busy=true;imp.disabled=true;try{const a=await auth();if(a.id!==owner)throw Error('Account changed. Reload the report.');if(!window.phImportVerifiedRealLeads)throw Error('Customer importer unavailable.');if(!window.phCloudSyncReady?.())throw Error('Cloud sync is not ready.');if(!confirm('Import '+rows.length+' reviewed lead(s) into your Customers list? Existing matching emails and lead IDs will be skipped.'))return;const result=window.phImportVerifiedRealLeads(rows,owner);stat.textContent='Added '+result.added+' customer(s); skipped '+result.skipped+' duplicate(s). Cloud sync will save the changes.';}catch(e){stat.textContent='Import stopped: '+e.message;}finally{busy=false;imp.disabled=!rows.length;}});
-document.querySelector('[data-tab="leads"]')?.addEventListener('click',()=>{if(sel.options.length===1)campaigns().catch(e=>stat.textContent=e.message);});
+async function refreshInboxCampaigns(){
+ if(document.hidden||busy)return;
+ try{await campaigns();}catch(e){stat.textContent=e.message;}
+}
+document.querySelector('[data-tab="leads"]')?.addEventListener('click',refreshInboxCampaigns);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshInboxCampaigns()});
+setInterval(refreshInboxCampaigns,60000);
+window.addEventListener('load',()=>setTimeout(refreshInboxCampaigns,1500));
 })();
