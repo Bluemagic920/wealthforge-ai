@@ -48,42 +48,51 @@ async function refresh(){
   }
  }catch(e){list.replaceChildren();note.textContent=e.message}
 }
-// Keep campaign drafts current after auth restoration and while this tab is in use.
-let refreshInFlight=false, lastAccount=null;
-const originalRefresh=refresh;
+// Automatically refresh on startup and whenever authentication or tab visibility changes.
+// Do not rely on a one-time session check: cloud.js restores auth asynchronously.
+let refreshInFlight=false, refreshQueued=false, lastUser=null;
+const performRefresh=refresh;
 refresh=async function(){
- if(refreshInFlight)return;
+ if(refreshInFlight){refreshQueued=true;return}
  refreshInFlight=true;
- try{await originalRefresh()}finally{refreshInFlight=false}
+ try{await performRefresh()}finally{
+  refreshInFlight=false;
+  if(refreshQueued){refreshQueued=false;setTimeout(refresh,0)}
+ }
 };
-async function refreshWhenAuthenticated(){
+async function refreshIfSignedIn(){
  const client=window.wealthforgeAuthClient;
- if(!client?.auth?.getSession)return;
+ if(!client?.auth?.getSession)return false;
  try{
   const {data,error}=await client.auth.getSession();
-  if(error||!data?.session?.user?.id){
-   if(lastAccount!==null){lastAccount=null;el('phLeadCampaignList').replaceChildren();el('phLeadListStatus').textContent='Sign in to view saved campaign drafts.';}
-   return;
-  }
-  lastAccount=data.session.user.id;
-  await refresh();
- }catch(e){el('phLeadListStatus').textContent='Campaign refresh: '+e.message}
+  if(error||!data?.session?.access_token)return false;
+  lastUser=data.session.user?.id||null;
+  await refresh();return true;
+ }catch(e){el('phLeadListStatus').textContent='Campaign refresh: '+e.message;return false}
 }
-// A delayed first check allows Supabase to restore its persisted session.
-setTimeout(refreshWhenAuthenticated,300);
-setTimeout(refreshWhenAuthenticated,1800);
-setInterval(()=>{if(document.visibilityState==='visible')refreshWhenAuthenticated()},60000);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshWhenAuthenticated()});
-window.addEventListener('focus',refreshWhenAuthenticated);
-// Supabase authentication events can arrive after the initial page load.
-setTimeout(()=>{
+// Retry early while cloud.js initializes; also retry after page/tab return.
+[0,400,1200,3000,6500].forEach(ms=>setTimeout(refreshIfSignedIn,ms));
+setInterval(()=>{if(document.visibilityState==='visible')refreshIfSignedIn()},60000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshIfSignedIn()});
+window.addEventListener('focus',refreshIfSignedIn);
+document.querySelectorAll('[data-tab]').forEach(button=>{
+ if(/lead/i.test(button.dataset.tab||''))
+  button.addEventListener('click',refreshIfSignedIn);
+});
+// Attach to the already-created Supabase client, and retry if it is not ready.
+function bindAuthEvents(){
  const client=window.wealthforgeAuthClient;
- if(client?.auth?.onAuthStateChange){
-  client.auth.onAuthStateChange((event)=>{
-   if(['SIGNED_IN','SIGNED_OUT','TOKEN_REFRESHED','INITIAL_SESSION'].includes(event))setTimeout(refreshWhenAuthenticated,0);
-  });
- }
-},0);
+ if(!client?.auth?.onAuthStateChange){setTimeout(bindAuthEvents,500);return}
+ client.auth.onAuthStateChange((event,session)=>{
+  if(event==='SIGNED_OUT'){
+   lastUser=null;el('phLeadCampaignList').replaceChildren();
+   el('phLeadListStatus').textContent='Sign in to view saved campaign drafts.';
+  }else if(session?.access_token&&['SIGNED_IN','TOKEN_REFRESHED','INITIAL_SESSION'].includes(event)){
+   setTimeout(refreshIfSignedIn,0);
+  }
+ });
+}
+bindAuthEvents();
 el('phLeadRefresh')?.addEventListener('click',refresh);
 el('phLeadBack').addEventListener('click',()=>{if(step>1&&!busy){step--;render()}});
 el('phLeadNext').addEventListener('click',async()=>{if(busy)return;if(step===1&&!source()){status('Choose a lead source before continuing.');return}if(step===2&&!el('phLeadCampaign').value.trim()){status('Enter a campaign name before continuing.');el('phLeadCampaign').focus();return}if(step<3){step++;render();return}if(!sourceMap[source()]){status('This source cannot be saved to the campaign service yet. Select a supported source, then try again.');return}busy=true;render();try{const j=await request('POST',{name:el('phLeadCampaign').value.trim(),source:sourceMap[source()]});step=1;busy=false;render();status('Saved: '+j.campaign.name+' (draft). No tracking or collection is enabled.');await refresh()}catch(e){busy=false;render();status('Campaign not saved: '+e.message)}});
