@@ -352,4 +352,4 @@ const state=document.getElementById('phAccountConnection');const status=document
 if(!state||!status)return;
 const update=()=>{const signed=document.getElementById('signedIn');const loggedIn=signed&&!signed.classList.contains('hidden');state.textContent=loggedIn?'Connected':'Sign in required';state.classList.toggle('is-connected',!!loggedIn);};
 new MutationObserver(update).observe(document.getElementById('signedIn'),{attributes:true,attributeFilter:['class']});update();
-})();</script><script src="ph-csv-export.js"></script><script src="ph-mobile-nav.js" defer></script></body></html>
+})();</script><script src="ph-csv-export.js"></script><script src="ph-mobile-nav.js" defer></script><script src="ph-stage8-report.js" defer></script></body></html>
