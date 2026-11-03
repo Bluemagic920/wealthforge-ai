@@ -21,7 +21,7 @@ const isSynthetic=l=>/\bstaging\s*test\b|do not contact|synthetic/i.test(String(
 let autoWorking=false;
 const report=document.getElementById('phStage8Report');if(report)report.insertAdjacentElement('beforebegin',panel);else section.append(panel);
 const $=id=>document.getElementById(id), sel=$('phRealCampaign'),stat=$('phRealStatus'),list=$('phRealList'),imp=$('phRealImport');
-let rows=[],owner=null,busy=false,importMessage=false;
+let rows=[],owner=null,busy=false,importMessage=false,refreshing=false,lastCampaignRefresh=0;
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 async function auth(){const c=window.wealthforgeAuthClient;if(!c)throw Error('Authentication is still loading.');const {data,error}=await c.auth.getSession();if(error)throw Error(error.message||'Authentication check failed.');if(!data?.session?.access_token||!data.session.user?.id)throw Error('Sign in first.');return {token:data.session.access_token,id:data.session.user.id};}
 async function req(path,token){const r=await fetch(api+path,{headers:{Authorization:'Bearer '+token},cache:'no-store'});let j;try{j=await r.json()}catch{throw Error('Invalid API response.')}if(!r.ok)throw Error(j.error||'HTTP '+r.status);return j;}
@@ -30,7 +30,7 @@ async function campaigns(){const a=await auth(),j=await req('/api/leads/campaign
 async function load(){if(busy)return;busy=true;importMessage=false;clear();stat.textContent='Loading real leads…';try{await campaigns();if(!uuid.test(sel.value))throw Error('Choose a campaign.');const a=await auth(),j=await req('/api/leads/real-report?campaign_id='+encodeURIComponent(sel.value),a.token);if(j.staging_only!==true||j.campaign?.id!==sel.value||!Array.isArray(j.leads))throw Error('Unexpected report; no leads imported.');rows=j.leads;owner=a.id;for(const l of rows){const p=document.createElement('p');p.textContent=[l.full_name,l.email,l.source,l.created_at].filter(Boolean).join(' · ');list.append(p);}stat.textContent=rows.length+' real lead(s) found. '+(rows.length?'Review before importing.':'No imports needed.');imp.disabled=!rows.length;}catch(e){stat.textContent=e.message;}finally{busy=false;}}
 $('phRealRefresh').addEventListener('click',load);
 sel.addEventListener('change',()=>{importMessage=false;clear();stat.textContent='Click Load real leads.';});
-imp.addEventListener('click',async()=>{if(busy||!rows.length||!owner)return;busy=true;imp.disabled=true;try{const a=await auth();if(a.id!==owner)throw Error('Account changed. Reload the report.');if(!window.phImportVerifiedRealLeads)throw Error('Customer importer unavailable.');if(typeof window.phCloudSyncReady!=='function')throw Error('Cloud sync readiness function is unavailable.');if(window.phCloudSyncReady()!==true)throw Error('Cloud sync is not ready. No customer was created. Check the dashboard sync status.');if(!confirm('Import '+rows.length+' reviewed lead(s) into your Customers list? Existing matching emails and lead IDs will be skipped.'))return;const eligible=rows.filter(l=>!isSynthetic(l));if(!eligible.length)throw Error('Only synthetic test records found; nothing to import.');const result=window.phImportVerifiedRealLeads(eligible,owner);importMessage=true;stat.textContent='Added '+result.added+' customer(s); skipped '+result.skipped+' duplicate(s). Cloud sync will save the changes.';}catch(e){importMessage=true;stat.textContent='Import stopped: '+e.message;}finally{busy=false;imp.disabled=!rows.length;}});
+imp.addEventListener('click',async()=>{if(busy||!rows.length||!owner)return;busy=true;imp.disabled=true;try{const a=await auth();if(a.id!==owner)throw Error('Account changed. Reload the report.');if(!window.phImportVerifiedRealLeads)throw Error('Customer importer unavailable.');if(typeof window.phCloudSyncReady!=='function')throw Error('Cloud sync readiness function is unavailable.');if(window.phCloudSyncReady()!==true)throw Error('Cloud sync is not ready. No customer was created. Check the dashboard sync status.');const eligible=rows.filter(l=>!isSynthetic(l));if(!confirm('Import '+eligible.length+' eligible reviewed lead(s) into your Customers list? '+(rows.length-eligible.length)+' synthetic record(s) excluded. Existing matching emails and lead IDs will be skipped.'))return;if(!eligible.length)throw Error('Only synthetic test records found; nothing to import.');const result=window.phImportVerifiedRealLeads(eligible,owner);importMessage=true;stat.textContent='Added '+result.added+' customer(s); skipped '+result.skipped+' duplicate(s). Cloud sync will save the changes.';}catch(e){importMessage=true;stat.textContent='Import stopped: '+e.message;}finally{busy=false;imp.disabled=!rows.length;}});
 async function autoImport(){
  if(!autoBox.checked||autoWorking||busy||document.hidden||!uuid.test(sel.value))return;
  autoWorking=true;
@@ -58,8 +58,9 @@ autoBox.addEventListener('change',()=>{
 sel.addEventListener('change',()=>{autoBox.checked=false;autoStatus.textContent='Campaign changed; automatic import OFF.';});
 setInterval(autoImport,30000);
 async function refreshInboxCampaigns(){
- if(document.hidden||busy||importMessage)return;
- stat.textContent='Refreshing campaigns…';
+ if(document.hidden||busy||importMessage||refreshing||Date.now()-lastCampaignRefresh<45000)return;
+ refreshing=true;lastCampaignRefresh=Date.now();
+ if(!rows.length)stat.textContent='Refreshing campaigns…';
  try{
   await campaigns();
   if(!rows.length)stat.textContent=uuid.test(sel.value)?'Campaign selected. Click Load real leads.':'Choose a campaign to load your real lead inbox.';
@@ -69,10 +70,10 @@ async function refreshInboxCampaigns(){
   stat.textContent=/sign in first|invalid jwt|session expired|not authenticated/i.test(String(e.message))
    ?'Sign in to load your real lead inbox.'
    :'Unable to refresh campaigns: '+e.message;
- }
+ }finally{refreshing=false;}
 }
 document.querySelector('[data-tab="leads"]')?.addEventListener('click',refreshInboxCampaigns);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshInboxCampaigns()});
-setInterval(refreshInboxCampaigns,60000);
+// Refresh when entering the Leads tab; avoid a second always-on campaign poller.
 window.addEventListener('load',()=>setTimeout(refreshInboxCampaigns,1500));
 })();

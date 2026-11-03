@@ -6,10 +6,15 @@ window.phImportVerifiedRealLeads = function(leads, accountId){
  if(!accountId||localStorage.getItem('wealthforge_active_user')!==accountId)throw Error('Account changed. Sign in again.');
  if(window.phCloudSyncReady?.()!==true)throw Error('Cloud sync is not ready. Resolve sync issues before importing.');
  if(!Array.isArray(leads)||leads.length>100)throw Error('Invalid lead batch.');
+ // Do not overwrite newer cloud-synchronized customer data with an old in-memory snapshot.
+ const storageKey='wealthforge_user_'+accountId;
+ if(KEY!==storageKey)throw Error('Customer account storage mismatch. Reload before importing.');
+ let latest;try{latest=JSON.parse(localStorage.getItem(storageKey)||'null')}catch{throw Error('Customer storage is unreadable. No changes made.');}
+ if(!latest||JSON.stringify(latest)!==JSON.stringify(data))throw Error('Customer data changed since this page loaded. Reload the page before importing to protect cloud data.');
  let added=0,skipped=0;
  for(const lead of leads){
   if(!lead||typeof lead.id!=='string'||!/^[0-9a-f-]{36}$/i.test(lead.id)||typeof lead.full_name!=='string'||!lead.full_name.trim()||typeof lead.email!=='string')throw Error('Invalid lead record. No changes made.');
-  if(/\bstaging\s*test\b|do not contact|synthetic/i.test(lead.full_name)||/@example\.invalid$/i.test(lead.email.trim()))throw Error('Synthetic staging records cannot be imported. No changes made.');
+  if(/\bstaging\s*test\b|do not contact|synthetic/i.test([lead.full_name,lead.notes,lead.source].join(' '))||/@example\.invalid$/i.test(lead.email.trim()))throw Error('Synthetic staging records cannot be imported. No changes made.');
  }
  for(const lead of leads){
   const email=lead.email.trim().toLowerCase();
