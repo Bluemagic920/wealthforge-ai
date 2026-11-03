@@ -3,7 +3,7 @@
 const section=document.getElementById('leads');if(!section)return;
 const api='https://profitharbor-leads-api.bluemagic920.workers.dev';
 const panel=document.createElement('div');panel.className='panel';panel.id='phRealLeadHandoff';
-panel.innerHTML='<h3>Real lead inbox · Production</h3><p class="note">View owner-scoped real leads. Import to Customers only after reviewing them. Public collection remains disabled until launch approval.</p><div class="ph-lead-actions"><label>Campaign <select id="phRealCampaign"><option value="">Choose campaign</option></select></label><button type="button" id="phRealRefresh">Load real leads</button><button type="button" id="phRealImport" disabled>Import reviewed leads into Customers</button></div><p id="phRealStatus" class="note" role="status">Loading your account…</p><div id="phRealList"></div>';
+panel.innerHTML='<h3>Real lead inbox · Production</h3><p class="note">View owner-scoped real leads. Import to Customers only after reviewing them. Public collection is enabled. Review incoming leads before importing them into Customers.</p><div class="ph-lead-actions"><label>Campaign <select id="phRealCampaign"><option value="">Choose campaign</option></select></label><button type="button" id="phRealRefresh">Load real leads</button><button type="button" id="phRealImport" disabled>Import reviewed leads into Customers</button></div><p id="phRealStatus" class="note" role="status">Loading your account…</p><div id="phRealList"></div>';
 // Stage 16: opt-in automatic import while this authenticated browser tab is open.
 // Server-side background import is NOT enabled. Synthetic records are always excluded.
 const controls=document.createElement('div');controls.id='phStage16Controls';
