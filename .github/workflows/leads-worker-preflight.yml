@@ -1,0 +1,29 @@
+name: Leads Worker preflight (no deployment)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'cloudflare/**'
+      - '.github/workflows/leads-worker-preflight.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Worker source syntax when present
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f cloudflare/worker.js ]; then
+            node --check cloudflare/worker.js
+          else
+            echo "Worker source not committed yet; syntax check deferred."
+          fi
+      - name: Confirm this workflow cannot deploy
+        run: |
+          echo "Read-only preflight. No Cloudflare credentials, deploy command, or production writes."
