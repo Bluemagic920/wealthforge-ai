@@ -28,8 +28,8 @@ begin
      or p_operation is null or p_operation not in ('status','prepare','customer')
      or jsonb_typeof(p_data) is distinct from 'object'
   then raise exception 'Invalid checkout operation'; end if;
-  if not exists (select 1 from auth.users u where u.id = p_user_id)
-  then raise exception 'Unknown account'; end if;
+  -- The Worker passes only an identity verified by Supabase Auth. The server role
+  -- cannot read auth.users; foreign keys reject any unknown account on insert.
 
   -- One checkout operation per account at a time.
   perform pg_advisory_xact_lock(hashtextextended('ironcrest_business_checkout:' || p_user_id::text, 0));

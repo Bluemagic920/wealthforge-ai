@@ -13,13 +13,13 @@ The site keeps its "Coming Soon" wording until the Business API reports live che
 
 ## Go-live steps
 
-1. **Database.** Apply `docs/business-checkout.sql` to the Supabase project. It adds one function and replaces `ironcrest_business_entitlement`; results for lifetime owners and the legacy subscription table are unchanged. It creates no tables and changes no rows.
+1. **Database.** Applied to production on November 16, 2026 (migrations `ironcrest_business_checkout_onboarding` and `ironcrest_business_checkout_remove_auth_lookup`). `docs/business-checkout.sql` is the combined result. It adds one function and replaces `ironcrest_business_entitlement`; results for lifetime owners and the legacy subscription table are unchanged. It creates no tables and changes no rows.
 2. **Business API Worker.** Create a Worker named `profitharbor-business-api` from `worker/business-api.mjs`. The site calls `https://profitharbor-business-api.bluemagic920.workers.dev`; if the name differs, update `API` in `ph-business.js`. Settings:
    - `BUSINESS_STRIPE_MODE`: `test` first, later `live`
    - `BUSINESS_STRIPE_KEY` (secret): Stripe key for that mode
    - `SUPABASE_SERVICE_ROLE_KEY` (secret)
    - `ENABLE_BUSINESS_CHECKOUT`: `true`
-3. **Test-mode run.** With the Worker in `test` mode, sign in on the site, open Account, and buy Business with a Stripe test card. The staging Worker's Business webhook already records test events. Expected: the panel shows "TEST MODE" and "Your Business membership is active". Test payments never unlock the live Ironcrest workspace.
+3. **Test-mode run.** With the Worker in `test` mode, sign in on the site, open Account, and buy Business with a Stripe test card. The staging Worker's Business webhook already records test events. Expected: the panel shows "TEST MODE" and "Your Business membership is active". Test payments never unlock the live Ironcrest workspace. Use a fresh account for this: the owner account has lifetime Business and is stopped before checkout.
 4. **Production webhook.** Deploy the Business billing webhook for live mode (`productionApproved: true`, `BUSINESS_STRIPE_MODE=live`, live key, live webhook secret, `ENABLE_BUSINESS_BILLING=true`) and register its `/api/business/billing/webhook` URL in Stripe live mode. This is not part of this change.
 5. **Pro features for Business.** `profitharbor-ai-live-api` grants Pro features (AI Assistant, unlimited customers) only to the Pro price. Until it also accepts an active Business membership, Business buyers do not get those. This is not part of this change.
 6. **Switch to live.** Set `BUSINESS_STRIPE_MODE=live` and the live key on `profitharbor-business-api`. The site then shows "Choose Business".

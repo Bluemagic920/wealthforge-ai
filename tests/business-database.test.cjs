@@ -37,7 +37,8 @@ test('Business checkout onboarding and live entitlement bridge',async t=>{
 
   for(const role of ['anon','authenticated'])assert.notEqual(fails(U.buyer,'status',{},'live',role).status,0,role+' cannot call checkout function');
   assert.notEqual(fails(U.buyer,'status',{},'prod').status,0);assert.notEqual(fails(U.buyer,'delete').status,0);
-  assert.notEqual(fails('99999999-9999-4999-8999-999999999999','status').status,0,'unknown account rejected');
+  assert.notEqual(fails('99999999-9999-4999-8999-999999999999','prepare',{companyName:'Ghost Co'}).status,0,'unknown account cannot create a company');
+  assert.equal(one(`select count(*) from public.ironcrest_organizations where name='Ghost Co';`,null),'0');
 
   let s=call(U.buyer,'status');
   assert.deepEqual([s.hasCompany,s.eligible,s.customerId,s.subscriptionActive,s.lifetimeBusiness],[false,true,null,false,false]);
