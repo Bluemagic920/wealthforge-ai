@@ -14,7 +14,7 @@ document.addEventListener('ph:leads-account-changed',()=>{loading++;el('phLeadCa
 async function refresh(){
  const list=el('phLeadCampaignList'),note=el('phLeadListStatus');note.textContent='Loading campaigns…';let generation=loading;
  try{
-  const context=await service.capture();generation=++loading;const [j,capabilities]=await Promise.all([request('GET',undefined,context),service.request('/api/leads/capabilities',{context})]);if(generation!==loading)return;list.replaceChildren();const rows=j.campaigns||[];
+  const context=await service.capture();generation=++loading;const [j,capabilities]=await Promise.all([request('GET',undefined,context),service.request('/api/leads/capabilities',{context})]);if(generation!==loading)return;list.replaceChildren();const rows=(j.campaigns||[]).filter(c=>c.status!=='archived');
   note.textContent=rows.length?rows.length+' saved campaign(s). Activation prepares tracking links; public collection requires separate approval.':'No saved campaigns yet.';
   for(const c of rows){
    const item=document.createElement('div');item.className='ph-campaign-item';

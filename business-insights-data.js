@@ -33,11 +33,12 @@ async function connect(){
    const json=await response.json();
    if(!response.ok)throw new Error(json.error||'HTTP '+response.status);
    if(!Array.isArray(json.campaigns))throw new Error('Unexpected campaign response');
+   json.campaigns=json.campaigns.filter(c=>c.status!=='archived');
    window.PHInsights.campaigns=json.campaigns;document.dispatchEvent(new Event('ph-insights-data'));
    el('realCampaigns').textContent=String(json.campaigns.length);
    const area=el('campaignHistory');area.replaceChildren();
    const heading=document.createElement('b');heading.textContent=json.campaigns.length+' saved campaign(s)';area.append(heading);
-   const note=document.createElement('p');note.textContent='Draft and archived campaigns only. These are not measured ad results or generated revenue.';area.append(note);
+   const note=document.createElement('p');note.textContent='Archived campaigns are hidden. These are not measured ad results or generated revenue.';area.append(note);
    if(json.campaigns.length){
     const list=document.createElement('div');list.style.cssText='width:100%;max-width:560px;margin:12px auto;text-align:left';
     for(const c of json.campaigns.slice(0,10)){
