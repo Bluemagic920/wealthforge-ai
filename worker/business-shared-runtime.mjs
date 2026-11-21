@@ -3,7 +3,7 @@ import {createBusinessBillingWorker} from './business-webhook-vendored.mjs';
 
 // Business runs inside the already configured ProfitHarbor live billing Worker.
 // Keys stay in that Worker; no key is copied, exposed or passed to another service.
-export function createSharedBusinessWorker({core,sourceApproved=false,fetcher=fetch,
+export function createSharedBusinessWorker({core=null,sourceApproved=false,fetcher=fetch,
   apiFactory=createBusinessApi,webhookFactory=createBusinessBillingWorker}={}) {
   if(typeof core?.fetch!=='function')throw Error('Existing Pro service required');
   const api=apiFactory({productionApproved:sourceApproved,verifyConfiguration:true,fetcher});
