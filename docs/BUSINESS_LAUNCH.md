@@ -1,5 +1,7 @@
 # Business membership launch
 
+November 21 update: the approved live rollout now reuses the credentials and webhook already configured in the existing Pro billing Worker. See [BUSINESS_SHARED_LIVE.md](BUSINESS_SHARED_LIVE.md) for the current deployment architecture and gates. Older separate-service setup steps below are historical and do not require new keys or another account login.
+
 Business ($129.99 a month or $1,325.90 a year, 20 employees) is bought on profitharborai.com and unlocks Ironcrest Workforce Operations.
 
 ## How it works
