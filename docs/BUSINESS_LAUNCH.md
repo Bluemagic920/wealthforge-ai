@@ -18,16 +18,29 @@ The site keeps its "Coming Soon" wording until the Business API reports live che
    - `BUSINESS_STRIPE_MODE`: `test` first, later `live`
    - `BUSINESS_STRIPE_KEY` (secret): Stripe key for that mode
    - `SUPABASE_SERVICE_ROLE_KEY` (secret)
-   - `ENABLE_BUSINESS_CHECKOUT`: `true`
+   - `ENABLE_BUSINESS_CHECKOUT`: keep `false` until verification is complete
+   - `BUSINESS_WEBHOOK_READY`: `true` only after the matching account's signed webhook and paid-invoice access update have been verified
+   - `BUSINESS_CHECKOUT_ATTEMPTS_READY`: `true` only after the approved `docs/business-checkout-attempts.sql` migration is installed
+   - Live checkout additionally requires the reviewed release to pass `productionApproved: true` to `createBusinessApi`; the checked-in default keeps live charging closed regardless of environment flags.
 3. **Test-mode run.** With the Worker in `test` mode, sign in on the site, open Account, and buy Business with a Stripe test card. The staging Worker's Business webhook already records test events. Expected: the panel shows "TEST MODE" and "Your Business membership is active". Test payments never unlock the live Ironcrest workspace. Use a fresh account for this: the owner account has lifetime Business and is stopped before checkout.
 4. **Production webhook.** Deploy the Business billing webhook for live mode (`productionApproved: true`, `BUSINESS_STRIPE_MODE=live`, live key, live webhook secret, `ENABLE_BUSINESS_BILLING=true`) and register its `/api/business/billing/webhook` URL in Stripe live mode. This is not part of this change.
 5. **Pro features for Business.** `profitharbor-ai-live-api` grants Pro features (AI Assistant, unlimited customers) only to the Pro price. Until it also accepts an active Business membership, Business buyers do not get those. This is not part of this change.
-6. **Switch to live.** Set `BUSINESS_STRIPE_MODE=live` and the live key on `profitharbor-business-api`. The site then shows "Choose Business".
+6. **Switch to live, after explicit approval.** Review and deploy the production-approved build, install the approved checkout-attempt migration, enter the live credentials securely, verify the live webhook, and enable the readiness and checkout flags. The site then shows "Choose Business".
+
+## November 20 checkout completion work
+
+The previously missing `profitharbor-business-api` service has been created. Checkout now reserves one durable attempt per account and mode before creating a Stripe session. Monthly/annual and cross-browser requests share that reservation; retries use persisted parameters and the same Stripe idempotency key. Only a server-retrieved, verified expired session allows a new attempt. A lost response without a saved session becomes a support review if the safe retry window expires; it never silently starts another payment.
+
+The proposed `docs/business-checkout-attempts.sql` creates a service-only table and function. It does not update existing memberships, subscriptions, campaigns or payment mappings. **It has not been applied to the hosted database; approval is required.** It has been applied twice in a temporary real PostgreSQL test database, with membership preservation, role denial, immutable receipts, expiry and risk-hold checks.
+
+The browser checks that the signed-in session still matches the account whose billing was displayed before sending a request and before redirecting. A failed or uncertain request requires a fresh billing status check. Returning with `?business=success` does not assert that payment was received; only server billing status can confirm activation.
+
+Remaining before opening checkout: secure credentials on the new service; approved hosted reservation migration; a real test purchase by a verified account without lifetime Business; monthly/annual payment-to-access, cancellation, failed-payment and risk checks; Business access in the existing Pro service; live webhook configuration and final production approval. Geofencing follows billing, per the owner's requested order.
 
 ## Known limits
 
 - **Resubscribing.** The billing ledger pins one subscription per company. A customer whose Business subscription ended cannot buy again without manual reconciliation; checkout stops them before any payment.
-- **Pro subscribers.** An account with an active Pro subscription must set it to cancel before buying Business, so it is never billed for both.
+- **Pro subscribers.** An account with an active Pro subscription must set it to cancel before buying Business. Its already-paid Pro period can overlap the first Business period; there is no automatic credit or refund.
 - **Unlimited employees add-on.** Recognised by the webhook but not sold here yet.
 - **Team members.** An account that is an employee of a company cannot buy Business; it needs a separate account.
 

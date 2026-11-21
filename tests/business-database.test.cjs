@@ -3,11 +3,13 @@ const U={life:'11111111-1111-4111-8111-111111111111',legacy:'22222222-2222-4222-
 const O={life:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',legacy:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'};
 test('Business checkout onboarding and live entitlement bridge',async t=>{
  let bin=process.env.PH_PG_BIN;if(!bin){try{bin=cp.execFileSync('pg_config',['--bindir'],{encoding:'utf8'}).trim();}catch{}}
- if(!bin||!fs.existsSync(path.join(bin,'initdb'))){t.skip('PostgreSQL server binaries not available');return;}
+ const exe=name=>name+(process.platform==='win32'?'.exe':'');
+ if(!bin&&process.platform==='win32')bin='C:/Program Files/PostgreSQL/17/bin';
+ if(!bin||!fs.existsSync(path.join(bin,exe('initdb')))){t.skip('PostgreSQL server binaries not available');return;}
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ph-business-')),data=path.join(dir,'data');
  const env={...process.env};for(const key of Object.keys(env))if(key.startsWith('PG'))delete env[key];
  const port=await new Promise(resolve=>{const s=net.createServer();s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p));});});
- const run=(name,args)=>{const r=cp.spawnSync(path.join(bin,name),args,{env,encoding:'utf8',timeout:120000});if(r.status!==0)throw Error(name+' failed: '+(r.stderr||r.stdout));};
+ const run=(name,args)=>{const log=fs.openSync(path.join(dir,name+'.log'),'a');let r;try{r=cp.spawnSync(path.join(bin,exe(name)),args,{env,windowsHide:true,stdio:['ignore',log,log],timeout:120000});}finally{fs.closeSync(log);}if(r.status!==0)throw Error(name+' failed: '+fs.readFileSync(path.join(dir,name+'.log'),'utf8'));};
  const args=['-X','-q','-A','-t','-v','ON_ERROR_STOP=1','-h','127.0.0.1','-p',String(port),'-U','ph_test','-d','postgres'];
  function sql(text,role='service_role',ok=true){const r=cp.spawnSync(path.join(bin,'psql'),args,{env,input:(role?'set role '+role+';\n':'')+text,encoding:'utf8',timeout:60000});if(ok&&r.status!==0)throw Error(r.stderr);return r;}
  const one=(text,role)=>sql(text,role).stdout.trim();
@@ -17,7 +19,7 @@ test('Business checkout onboarding and live entitlement bridge',async t=>{
  let started=false;
  try{
   run('initdb',['-D',data,'-U','ph_test','-A','trust','--no-locale','-E','UTF8']);
-  run('pg_ctl',['-D',data,'-l',path.join(dir,'server.log'),'-o','-h 127.0.0.1 -p '+port+' -k '+dir,'-w','start']);started=true;
+  run('pg_ctl',['-D',data,'-l',path.join(dir,'server.log'),'-o','-h 127.0.0.1 -p '+port+(process.platform==='win32'?'':' -k '+dir),'-w','start']);started=true;
   sql(fs.readFileSync(path.join(__dirname,'helpers','business-schema.sql'),'utf8'),null);
   sql(`insert into auth.users(id) values ${Object.values(U).map(x=>`('${x}')`).join(',')};
    insert into public.ironcrest_organizations(id,name,created_by) values ('${O.life}','Lifetime Co','${U.life}'),('${O.legacy}','Legacy Co','${U.legacy}');
@@ -54,6 +56,26 @@ test('Business checkout onboarding and live entitlement bridge',async t=>{
   assert.equal(call(U.buyer,'customer',{customerId:'cus_Live1'}).customerId,'cus_Live1');
   assert.equal(call(U.buyer,'customer',{customerId:'cus_Live1'}).customerId,'cus_Live1','same customer is idempotent');
   assert.notEqual(fails(U.buyer,'customer',{customerId:'cus_Other'}).status,0,'mapping cannot be replaced');
+  sql(fs.readFileSync(path.join(__dirname,'..','docs','business-checkout-attempts.sql'),'utf8'),null);
+  sql(fs.readFileSync(path.join(__dirname,'..','docs','business-checkout-attempts.sql'),'utf8'),null);
+  const attempt=(op,data={},role='service_role',ok=true)=>sql(`select public.ironcrest_business_checkout_attempt('live','${U.buyer}','${op}','${JSON.stringify(data).replaceAll("'","''")}'::jsonb);`,role,ok);
+  const reserve={interval:'month',origin:'https://profitharborai.com'};
+  const a=JSON.parse(attempt('reserve',reserve).stdout);
+  const a2=JSON.parse(attempt('reserve',{...reserve,interval:'year'}).stdout);
+  assert.equal(a.attemptId,a2.attemptId,'monthly and annual share one durable reservation');assert.equal(a2.interval,'month');
+  for(const role of ['anon','authenticated']){
+   assert.notEqual(attempt('reserve',reserve,role,false).status,0);
+   assert.notEqual(sql('select * from public.ironcrest_business_checkout_attempts;',role,false).status,0);
+  }
+  assert.notEqual(attempt('record',{attemptId:a.attemptId,sessionId:'sub_wrong'},'service_role',false).status,0);
+  attempt('record',{attemptId:a.attemptId,sessionId:'cs_test_One'});
+  assert.notEqual(attempt('record',{attemptId:a.attemptId,sessionId:'cs_test_Other'},'service_role',false).status,0);
+  assert.notEqual(attempt('expired',{attemptId:a.attemptId,sessionId:'cs_test_Other',...reserve},'service_role',false).status,0);
+  const renewed=JSON.parse(attempt('expired',{attemptId:a.attemptId,sessionId:'cs_test_One',...reserve,interval:'year'}).stdout);
+  assert.notEqual(renewed.attemptId,a.attemptId);assert.equal(renewed.interval,'year');assert.equal(renewed.sessionId,null);
+  sql(`update public.ironcrest_billing_customers set review_required=true where customer_id='cus_Live1';`,null);
+  assert.notEqual(attempt('reserve',reserve,'service_role',false).status,0,'risk hold blocks a reservation');
+  sql(`update public.ironcrest_billing_customers set review_required=false where customer_id='cus_Live1';`,null);
   assert.equal(call(U.buyer,'customer',{customerId:'cus_Test1'},'test').customerId,'cus_Test1','test and live are separate');
 
   // Employees and ambiguous accounts cannot start a second company.

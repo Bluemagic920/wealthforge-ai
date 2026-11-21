@@ -6,12 +6,19 @@ async function fixture(overrides={}){
  const {createBusinessApi}=await import('../worker/business-api.mjs');
  const f={calls:[],state:{mode:'live',hasCompany:false,organizationId:null,eligible:true,lifetimeBusiness:false,customerId:null,reviewRequired:false,subscriptionStatus:null,subscriptionActive:false,employeeLimit:null,currentPeriodEnd:null,cancelAtPeriodEnd:false},
   user:{id:USER,email:'owner@example.com',email_confirmed_at:'2026-11-01T00:00:00Z'},pro:[],subscriptions:[],account:'acct_1UWd63AQCOww3CbZ',priceAmount:12999,rpcError:null,
-  env:{ENABLE_BUSINESS_CHECKOUT:'true',BUSINESS_STRIPE_MODE:'live',BUSINESS_STRIPE_KEY:'sk_live_abc123',SUPABASE_SERVICE_ROLE_KEY:'sb_secret_x'},...overrides};
+  env:{ENABLE_BUSINESS_CHECKOUT:'true',BUSINESS_WEBHOOK_READY:'true',BUSINESS_CHECKOUT_ATTEMPTS_READY:'true',BUSINESS_STRIPE_MODE:'live',BUSINESS_STRIPE_KEY:'sk_live_abc123',SUPABASE_SERVICE_ROLE_KEY:'sb_secret_x'},...overrides};
  const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
  const fetcher=async(input,init={})=>{
   const url=new URL(input),method=init.method||'GET',body=init.body||'';f.calls.push({url,method,body,headers:init.headers||{}});
   if(url.pathname==='/auth/v1/user')return f.user?json(f.user):json({},401);
   if(url.pathname==='/rest/v1/ph_subscriptions_live')return json(f.pro);
+  if(url.pathname==='/rest/v1/rpc/ironcrest_business_checkout_attempt'){
+   const p=JSON.parse(body),d=p.p_data;
+   if(p.p_operation==='reserve'&&!f.attempt)f.attempt={attemptId:ORG,interval:d.interval,origin:d.origin,expiresAt:NOW/1000+3600,sessionId:null,customerId:f.state.customerId,organizationId:ORG};
+   if(p.p_operation==='record')f.attempt.sessionId=d.sessionId;
+   if(p.p_operation==='expired')f.attempt={...f.attempt,attemptId:'dddddddd-dddd-4ddd-8ddd-dddddddddddd',sessionId:null,interval:d.interval,origin:d.origin};
+   return json(f.attempt);
+  }
   if(url.pathname==='/rest/v1/rpc/ironcrest_business_checkout'){
    const p=JSON.parse(body);assert.equal(p.p_user_id,USER);assert.equal(p.p_mode,f.env.BUSINESS_STRIPE_MODE);
    if(f.rpcError)return json({message:f.rpcError},400);
@@ -26,12 +33,13 @@ async function fixture(overrides={}){
    if(url.pathname.startsWith('/v1/prices/')){const id=url.pathname.split('/').pop(),year=/YO1J|Z2AJ/.test(id);return json({id,livemode:live,active:true,currency:'usd',unit_amount:year?132590:f.priceAmount,recurring:{interval:year?'year':'month',interval_count:1}});}
    if(url.pathname==='/v1/customers')return json({id:'cus_New1',livemode:live});
    if(url.pathname==='/v1/subscriptions')return json({data:f.subscriptions,has_more:false});
-   if(url.pathname==='/v1/checkout/sessions')return json({id:'cs_1',livemode:live,mode:'subscription',customer:params.get('customer'),url:f.sessionUrl||'https://checkout.stripe.com/c/pay/cs_1'});
+   if(url.pathname==='/v1/checkout/sessions') { f.session={id:'cs_1',livemode:live,status:'open',expires_at:Number(params.get('expires_at')),mode:'subscription',customer:params.get('customer'),url:f.sessionUrl||'https://checkout.stripe.com/c/pay/cs_1'}; return json(f.session); }
+   if(url.pathname==='/v1/checkout/sessions/cs_1')return json(f.session);
    if(url.pathname==='/v1/billing_portal/sessions')return json({id:'bps_1',livemode:live,url:'https://billing.stripe.com/p/session/1'});
   }
   throw Error('Unexpected request '+url);
  };
- f.api=createBusinessApi({fetcher,now:()=>NOW});
+ f.api=createBusinessApi({fetcher,now:()=>NOW,productionApproved:overrides.productionApproved!==false});
  f.req=(path,method='GET',body,headers={})=>f.api.fetch(new Request('https://business.example'+path,{method,headers:{Origin:ORIGIN,Authorization:'Bearer token.abc',...(body!==undefined?{'Content-Type':'application/json'}:{}),...headers},...(body!==undefined?{body:typeof body==='string'?body:JSON.stringify(body)}:{})}),f.env);
  f.stripeCalls=()=>f.calls.filter(c=>c.url.hostname==='api.stripe.com');
  f.sessions=()=>f.calls.filter(c=>c.url.pathname==='/v1/checkout/sessions');
@@ -49,11 +57,39 @@ test('new owner: company is created, customer mapped, and a Business checkout se
  assert.equal(p.get('subscription_data[metadata][ph_user_id]'),null);assert.equal(p.get('subscription_data[metadata][ironcrest_organization_id]'),ORG);
  assert.equal(p.get('success_url'),ORIGIN+'/?business=success');
  const expires=Number(p.get('expires_at'))-NOW/1000;assert.ok(expires>=3600&&expires<=5400,'expiry is deterministic and at least an hour ahead');
- assert.match(call.headers['Idempotency-Key'],/^ironcrest-business-checkout:live:3{8}-.*:month:\d+$/);
- const again=await buy(f);assert.equal(again.status,200);assert.equal(f.sessions()[1].body,call.body,'retry sends identical parameters');assert.equal(f.sessions()[1].headers['Idempotency-Key'],call.headers['Idempotency-Key']);
+ assert.equal(call.headers['Idempotency-Key'],'ironcrest-business-checkout:live:'+ORG);
+ const again=await buy(f);assert.equal(again.status,200);assert.equal(f.sessions().length,1,'retry retrieves the existing session');
  assert.equal(f.calls.filter(c=>c.url.pathname==='/v1/customers').length,1,'mapped customer is reused');
 });
 test('annual billing uses the annual price',async()=>{const f=await fixture();assert.equal((await buy(f,{interval:'year',companyName:'A'})).status,200);assert.equal(new URLSearchParams(f.sessions()[0].body).get('line_items[0][price]'),'price_1UYO1JAQCOww3CbZAMWwOC7N');});
+
+test('monthly and annual races cannot create competing checkouts',async()=>{
+ const f=await fixture();const results=await Promise.all([buy(f),buy(f,{interval:'year',companyName:'A'})]);
+ assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);assert.equal(f.sessions().length,1);
+ assert.equal(f.attempt.interval,'month');
+});
+
+test('uncertain checkout retries use the same persisted attempt and parameters',async()=>{
+ const f=await fixture();await buy(f);const first=f.sessions()[0];f.attempt.sessionId=null;
+ assert.equal((await buy(f)).status,200);const retry=f.sessions()[1];
+ assert.equal(retry.body,first.body);assert.equal(retry.headers['Idempotency-Key'],first.headers['Idempotency-Key']);
+ f.attempt.sessionId=null;f.attempt.expiresAt=NOW/1000-1;
+ const r=await buy(f);assert.equal(r.status,409);assert.equal((await r.json()).code,'checkout_review');assert.equal(f.sessions().length,2);
+});
+
+test('only a verified expired session permits a fresh reservation',async()=>{
+ const f=await fixture();await buy(f);f.session.status='complete';
+ let r=await buy(f);assert.equal(r.status,409);assert.equal((await r.json()).code,'payment_pending');assert.equal(f.sessions().length,1);
+ f.session.status='expired';r=await buy(f,{interval:'year',companyName:'A'});assert.equal(r.status,200);assert.equal(f.sessions().length,2);
+ assert.notEqual(f.sessions()[0].headers['Idempotency-Key'],f.sessions()[1].headers['Idempotency-Key']);
+});
+
+test('live checkout needs explicit release approval and verified dependencies',async()=>{
+ for(const flag of ['BUSINESS_WEBHOOK_READY','BUSINESS_CHECKOUT_ATTEMPTS_READY']){
+  const f=await fixture();delete f.env[flag];assert.equal((await buy(f)).status,503);assert.equal(f.stripeCalls().length,0);
+ }
+ const f=await fixture({productionApproved:false});assert.equal((await buy(f)).status,503);assert.equal(f.stripeCalls().length,0);
+});
 test('test mode uses sandbox prices and never the live catalog',async()=>{
  const f=await fixture({account:'acct_1UWd69AJcPWZlA8s'});f.env.BUSINESS_STRIPE_MODE='test';f.env.BUSINESS_STRIPE_KEY='sk_test_abc123';
  assert.equal((await buy(f)).status,200);assert.equal(new URLSearchParams(f.sessions()[0].body).get('line_items[0][price]'),'price_1Uc5Z1AJcPWZlA8sEhP4K4Mb');

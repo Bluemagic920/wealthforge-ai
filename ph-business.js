@@ -7,7 +7,7 @@
   const panel=$('phBusinessPanel'),status=$('phBusinessStatus'),form=$('phBusinessForm'),company=$('phBusinessCompany'),
     companyRow=$('phBusinessCompanyRow'),buy=$('phBusinessBuy'),actions=$('phBusinessActions'),open=$('phBusinessOpen'),manage=$('phBusinessManage');
   if(!panel||!status||!form||!company||!companyRow||!buy||!actions||!open||!manage)return;
-  let seq=0,state=null,busy=false,launched=false,notice='';
+  let seq=0,state=null,stateToken=null,busy=false,launched=false,notice='',authSubscribed=false;
   window.phVerifiedBusiness=false;
   const money=cents=>'$'+(cents/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   const day=value=>{const d=new Date(value);return Number.isFinite(d.getTime())?d.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'';};
@@ -58,6 +58,10 @@
     panel.hidden=!show;status.textContent=test+(notice?notice+' ':'')+text;
   }
   async function check(){
+    const auth=window.wealthforgeAuthClient?.auth;
+    if(!authSubscribed&&auth?.onAuthStateChange){authSubscribed=true;auth.onAuthStateChange(()=>{
+      ++seq;state=null;stateToken=null;window.phVerifiedBusiness=false;render();setTimeout(check,0);
+    });}
     const current=++seq,token=await sessionToken();
     try{
       if(!token){
@@ -68,35 +72,38 @@
         state=null;render();return;
       }
       const r=await call('/api/business/status','GET',token);
-      if(current!==seq)return;
+      if(current!==seq||token!==await sessionToken())return;
       if(!r.ok||r.result.available!==true||!r.result.prices){state=null;render();return;}
-      state=r.result;
+      state=r.result;stateToken=token;
+      if(!busy){buy.disabled=false;manage.disabled=false;}
       if(state.mode==='live'&&(state.checkoutOpen||state.active)||state.lifetime)launch();
       render();
     }catch{if(current===seq){state=null;render();}}
   }
   async function redirect(path,body,host){
-    if(busy)return;busy=true;buy.disabled=true;manage.disabled=true;notice='';
+    if(busy||!stateToken)return;const renderedToken=stateToken,current=seq;busy=true;buy.disabled=true;manage.disabled=true;notice='';
     status.textContent='Preparing secure Stripe billing…';
     try{
       const token=await sessionToken();if(!token)throw Error('Sign in under Account first.');
+      if(token!==renderedToken||current!==seq)throw Error('Your account changed. Refresh billing status before continuing.');
       const r=await call(path,'POST',token,body);
-      if(!r.ok||typeof r.result.url!=='string')throw Error(r.result.error||'Billing is unavailable right now. No payment was taken.');
+      if(token!==await sessionToken()||current!==seq)throw Error('Your account changed. Refresh billing status before continuing.');
+      if(!r.ok||typeof r.result.url!=='string')throw Error(r.result.error||'Billing is unavailable right now. Refresh billing status before trying again.');
       const destination=new URL(r.result.url);
-      if(destination.protocol!=='https:'||destination.hostname!==host)throw Error('Unexpected billing destination.');
+      if(destination.protocol!=='https:'||destination.hostname!==host||destination.username||destination.password||destination.port)throw Error('Unexpected billing destination.');
       window.location.assign(destination.href);
-    }catch(e){status.textContent=e?.message||'Billing is unavailable right now. No payment was taken.';}
-    finally{busy=false;buy.disabled=false;manage.disabled=false;}
+    }catch(e){status.textContent=e?.message||'Billing is unavailable right now. Refresh billing status before trying again.';}
+    finally{busy=false;/* A fresh status check is required before another attempt. */}
   }
   form.addEventListener('submit',event=>{
     event.preventDefault?.();
-    if(!state?.checkoutOpen)return;
+    if(!state?.checkoutOpen||buy.disabled)return;
     const name=company.value.trim();
     if(!state.hasCompany&&(name.length<1||name.length>120)){status.textContent='Enter your company name (up to 120 characters).';company.focus();return;}
     const interval=document.querySelector('input[name="phBusinessInterval"]:checked')?.value==='year'?'year':'month';
     redirect('/api/business/checkout',{interval,...(state.hasCompany?{}:{companyName:name})},'checkout.stripe.com');
   });
-  manage.addEventListener('click',()=>redirect('/api/business/portal',{},'billing.stripe.com'));
+  manage.addEventListener('click',()=>{if(!manage.disabled)redirect('/api/business/portal',{},'billing.stripe.com');});
   const showAccount=()=>{document.querySelector('[data-ph-target="cloud"]')?.click();};
   document.querySelectorAll('[data-business-action]').forEach(button=>button.addEventListener('click',()=>{
     if(button.disabled)return;
@@ -114,13 +121,13 @@
     try{const url=new URL(window.location.href);url.searchParams.delete('business');window.history.replaceState(null,'',url.pathname+url.search+url.hash);}catch{}
     setTimeout(async()=>{
       showAccount();
-      if(outcome==='cancelled'){notice='Checkout was cancelled. No payment was taken.';await check();notice='';return;}
+      if(outcome==='cancelled'){notice='Checkout closed. Checking billing status.';await check();notice='';return;}
       for(let attempt=0;attempt<12;attempt++){
-        notice='Payment received. Activating your Business membership…';await check();
+        notice='Confirming billing status…';await check();
         if(state?.active||!state){break;}
         await new Promise(resolve=>setTimeout(resolve,5000));
       }
-      notice=state&&!state.active?'Your payment is still being confirmed. Refresh this page in a minute.':'';render();notice='';
+      notice=state&&!state.active?'Billing has not confirmed an active membership yet. Refresh this page in a minute.':'';render();notice='';
     },1500);
   }else setTimeout(check,1300);
 })();

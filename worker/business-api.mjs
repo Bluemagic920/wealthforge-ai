@@ -47,7 +47,7 @@ class Stop extends Error {
 async function boundedJson(response, limit = 1000000) {
   const reader = response.body?.getReader();
   if (!reader) throw Error('Missing body');
-  const decoder = new TextDecoder('utf-8', { fatal: true });
+  const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: false });
   let size = 0, text = '';
   for (;;) {
     const part = await reader.read();
@@ -77,7 +77,9 @@ export function createBusinessApi(options = {}) {
     const key = env.BUSINESS_STRIPE_KEY;
     if (typeof key !== 'string' || !new RegExp('^[sr]k_' + mode + '_[A-Za-z0-9]+$').test(key)) return null;
     if (!env.SUPABASE_SERVICE_ROLE_KEY) return null;
-    return { mode, key, catalog: config.catalog[mode], open: env.ENABLE_BUSINESS_CHECKOUT === 'true' };
+    return { mode, key, catalog: config.catalog[mode], open: env.ENABLE_BUSINESS_CHECKOUT === 'true'
+      && env.BUSINESS_WEBHOOK_READY === 'true' && env.BUSINESS_CHECKOUT_ATTEMPTS_READY === 'true'
+      && (mode === 'test' || options.productionApproved === true) };
   }
 
   function databaseHeaders(env) {
@@ -110,6 +112,21 @@ export function createBusinessApi(options = {}) {
     if (!response.ok) throw Error('Membership lookup unavailable');
     const row = (await boundedJson(response, 20000))?.[0];
     return Boolean(row) && ['active', 'trialing', 'past_due'].includes(row.status) && row.cancel_at_period_end !== true;
+  }
+
+  async function attemptRpc(env, setup, user, operation, data) {
+    const r = await fetcher(config.project + '/rest/v1/rpc/ironcrest_business_checkout_attempt', {
+      method: 'POST', headers: { ...databaseHeaders(env), 'Content-Type': 'application/json' },
+      body: JSON.stringify({p_mode:setup.mode,p_user_id:user.id,p_operation:operation,p_data:data}),
+      redirect:'manual',signal:AbortSignal.timeout(10000)
+    });
+    if (!r.ok) throw Error('Checkout reservation unavailable');
+    const a = await boundedJson(r,20000);
+    if (!UUID.test(a?.attemptId || '') || !['month','year'].includes(a.interval) || !origins.has(a.origin)
+      || !Number.isSafeInteger(a.expiresAt) || !/^cus_[A-Za-z0-9]+$/.test(a.customerId || '')
+      || !UUID.test(a.organizationId || '') || (a.sessionId !== null && !/^cs_[A-Za-z0-9_]+$/.test(a.sessionId || '')))
+      throw Error('Invalid checkout reservation');
+    return a;
   }
 
   async function stripe(setup, path, params = null, idempotencyKey = null) {
@@ -210,30 +227,48 @@ export function createBusinessApi(options = {}) {
       throw new Stop(409, 'existing_subscription', 'A Business subscription already exists for this account. If you just paid, give it a minute and refresh.');
     if (existing.data.length) throw new Stop(...REACTIVATION);
 
-    // One reusable session per account, interval and half-hour window. Parameters
-    // are deterministic so Stripe idempotency returns the same session on retry.
-    const window = Math.floor(now() / 1800000);
-    const session = await stripe(setup, '/checkout/sessions', {
+    let attempt = await attemptRpc(env,setup,user,'reserve',{interval:body.interval,origin});
+    if (attempt.customerId !== customerId || attempt.organizationId !== state.organizationId) throw Error('Checkout mapping mismatch');
+    let session;
+    if (attempt.sessionId) {
+      session = await stripe(setup,'/checkout/sessions/'+attempt.sessionId);
+      if (session.id !== attempt.sessionId || session.customer !== customerId || session.mode !== 'subscription'
+        || session.livemode !== (setup.mode === 'live')) throw Error('Invalid checkout receipt');
+      if (session.status === 'expired') {
+        attempt = await attemptRpc(env,setup,user,'expired',{attemptId:attempt.attemptId,sessionId:attempt.sessionId,interval:body.interval,origin});
+        session = null;
+      } else if (session.status !== 'open') throw new Stop(409,'payment_pending','Checkout has already completed. Refresh billing status before trying again.');
+    }
+    if (attempt.interval !== body.interval) throw new Stop(409,'checkout_in_progress','A checkout for the other billing interval is already open. Complete or let that checkout expire before changing plans.');
+    // Persisted parameters and a single reservation survive retries, clock changes,
+    // monthly/annual races and uncertain Stripe responses across Worker instances.
+    if (!session && attempt.expiresAt < Math.floor(now()/1000)+1800)
+      throw new Stop(409,'checkout_review','A previous checkout needs review before another payment can be started. Please contact support.');
+    if (!session) session = await stripe(setup, '/checkout/sessions', {
       mode: 'subscription', customer: customerId, 'line_items[0][price]': price.id, 'line_items[0][quantity]': '1',
       client_reference_id: user.id, 'metadata[ironcrest_organization_id]': state.organizationId,
       'subscription_data[metadata][ironcrest_organization_id]': state.organizationId,
-      success_url: origin + '/?business=success', cancel_url: origin + '/?business=cancelled',
-      expires_at: String(window * 1800 + 5400)
-    }, 'ironcrest-business-checkout:' + setup.mode + ':' + user.id + ':' + body.interval + ':' + window);
+      success_url: attempt.origin + '/?business=success', cancel_url: attempt.origin + '/?business=cancelled',
+      expires_at: String(attempt.expiresAt)
+    }, 'ironcrest-business-checkout:' + setup.mode + ':' + attempt.attemptId);
     let url;
     try { url = new URL(session.url); } catch { throw Error('Invalid checkout receipt'); }
-    if (session.mode !== 'subscription' || session.customer !== customerId || url.protocol !== 'https:' || url.hostname !== 'checkout.stripe.com' || url.username || url.password || url.port)
+    if (!/^cs_[A-Za-z0-9_]+$/.test(session.id || '') || session.livemode !== (setup.mode === 'live')
+      || session.status !== 'open' || session.expires_at !== attempt.expiresAt
+      || session.mode !== 'subscription' || session.customer !== customerId || url.protocol !== 'https:' || url.hostname !== 'checkout.stripe.com' || url.username || url.password || url.port)
       throw Error('Invalid checkout receipt');
+    await attemptRpc(env,setup,user,'record',{attemptId:attempt.attemptId,sessionId:session.id});
     return reply({ url: url.href }, 200, origin);
   }
 
   async function portal(env, setup, user, origin) {
     const state = await checkoutRpc(env, setup.mode, user.id, 'status');
     if (!/^cus_[A-Za-z0-9]+$/.test(state.customerId || '') || !state.subscriptionStatus) throw new Stop(404, 'no_billing', 'No Business billing found for this account.');
+    if ((await stripe(setup,'/account'))?.id !== setup.catalog.account) throw Error('Stripe account mismatch');
     const session = await stripe(setup, '/billing_portal/sessions', { customer: state.customerId, return_url: origin + '/' });
     let url;
     try { url = new URL(session.url); } catch { throw Error('Invalid portal receipt'); }
-    if (url.protocol !== 'https:' || url.hostname !== 'billing.stripe.com') throw Error('Invalid portal receipt');
+    if (url.protocol !== 'https:' || url.hostname !== 'billing.stripe.com' || url.username || url.password || url.port) throw Error('Invalid portal receipt');
     return reply({ url: url.href }, 200, origin);
   }
 
@@ -260,7 +295,7 @@ export function createBusinessApi(options = {}) {
     } catch (error) {
       if (error instanceof Stop) return reply({ error: error.message, code: error.code }, error.status, origin);
       console.warn('Business API failure', String(error?.message || 'error').slice(0, 80));
-      return reply({ error: 'Business billing is temporarily unavailable. No payment was taken.', code: 'unavailable' }, 503, origin);
+      return reply({ error: 'Business billing is temporarily unavailable. Refresh billing status before trying again.', code: 'unavailable' }, 503, origin);
     }
   } };
 }
