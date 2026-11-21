@@ -139,3 +139,12 @@ test('status and billing portal',async()=>{
  const r=await f.req('/api/business/portal','POST',{});assert.equal(r.status,200);assert.equal((await r.json()).url,'https://billing.stripe.com/p/session/1');
  const health=await(await f.api.fetch(new Request('https://business.example/health'),f.env)).json();assert.deepEqual([health.configured,health.mode,health.checkoutOpen],[true,'live',true]);
 });
+
+test('test status verifies both catalog prices without changing an employee account',async()=>{
+ const f=await fixture({account:'acct_1UWd69AJcPWZlA8s'});Object.assign(f.env,{BUSINESS_STRIPE_MODE:'test',BUSINESS_STRIPE_KEY:'sk_test_fixture'});
+ Object.assign(f.state,{eligible:false});const before=JSON.stringify(f.state);
+ let r=await f.req('/api/business/status');let s=await r.json();assert.equal(r.status,200);assert.equal(s.billingConnectionVerified,true);assert.equal(s.eligible,false);
+ assert.equal(JSON.stringify(f.state),before);assert.equal(f.sessions().length,0);assert.equal(f.stripeCalls().filter(x=>x.url.pathname.startsWith('/v1/prices/')).length,2);
+ assert.ok(f.calls.filter(x=>x.url.pathname.includes('/rpc/')).every(x=>JSON.parse(x.body).p_operation==='status'));
+ f.account='acct_wrong';r=await f.req('/api/business/status');assert.equal(r.status,503);assert.equal((await r.json()).billingConnectionVerified,undefined);
+});

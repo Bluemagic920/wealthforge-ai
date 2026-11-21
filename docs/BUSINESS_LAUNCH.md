@@ -14,7 +14,7 @@ The site keeps its "Coming Soon" wording until the Business API reports live che
 ## Go-live steps
 
 1. **Database.** Applied to production on November 16, 2026 (migrations `ironcrest_business_checkout_onboarding` and `ironcrest_business_checkout_remove_auth_lookup`). `docs/business-checkout.sql` is the combined result. It adds one function and replaces `ironcrest_business_entitlement`; results for lifetime owners and the legacy subscription table are unchanged. It creates no tables and changes no rows.
-2. **Business API Worker.** Created and deployed as `profitharbor-business-api` from `worker/business-api.mjs`. On November 21 the owner entered both secrets securely, and the service reported `configured=true`, `mode=test`, `checkoutOpen=true`. This verifies configuration presence, not a completed purchase or the keys' remote permissions. The site calls `https://profitharbor-business-api.bluemagic920.workers.dev`; if the name differs, update `API` in `ph-business.js`. Settings:
+2. **Business API Worker.** Created and deployed as `profitharbor-business-api` from `worker/business-api.mjs`. On November 21 the owner entered both secrets securely, and the service reported `configured=true`, `mode=test`, `checkoutOpen=true`. Version `013d2b57` additionally verifies the Stripe account and both catalog prices during authenticated test status reads. An actual signed-in status read succeeded after deployment, verifying the saved Stripe and database credentials without starting a purchase. The site calls `https://profitharbor-business-api.bluemagic920.workers.dev`; if the name differs, update `API` in `ph-business.js`. Settings:
    - `BUSINESS_STRIPE_MODE`: `test` first, later `live`
    - `BUSINESS_STRIPE_KEY` (secret): Stripe key for that mode
    - `SUPABASE_SERVICE_ROLE_KEY` (secret)
@@ -35,7 +35,9 @@ The previously missing `profitharbor-business-api` service has been created. Che
 
 The browser checks that the signed-in session still matches the account whose billing was displayed before sending a request and before redirecting. A failed or uncertain request requires a fresh billing status check. Returning with `?business=success` does not assert that payment was received; only server billing status can confirm activation.
 
-Remaining before opening live checkout: a real test purchase by a verified account without lifetime Business; monthly/annual payment-to-access, cancellation, failed-payment and risk checks; approved deployment of the tested Business/Pro access candidate; live webhook configuration and final production approval. The owner is signing in directly for the test; no account password or secret is stored in this repository. Geofencing follows billing, per the owner's requested order.
+The provided test account signed in successfully, but server eligibility correctly identifies it as an existing company team member. Checkout is therefore blocked without changing any membership or creating a company/customer. The owner declined creating another login. Full checkout acceptance remains unverified until an eligible account is available; no eligibility bypass has been added. The source also fixes a browser-discovered CSS issue where layout rules overrode the hidden attribute on the blocked checkout form. Browser verification with the actual styles and billing script confirmed the blocked form stays hidden and eligible existing-company checkout remains visible.
+
+Remaining before opening live checkout: an eligible-account test purchase; monthly/annual payment-to-access, cancellation, failed-payment and risk checks; approved frontend and Business/Pro candidate deployment; live webhook configuration and final production approval. No account password or secret is stored in this repository. Geofencing follows billing, per the owner's requested order.
 
 ## Known limits
 

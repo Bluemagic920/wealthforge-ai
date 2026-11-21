@@ -156,6 +156,19 @@ export function createBusinessApi(options = {}) {
     return UUID.test(user?.id || '') && user.email_confirmed_at && typeof user.email === 'string' && user.email.length <= 254 ? user : null;
   }
 
+  // Authenticated status checks verify saved credentials without starting a
+  // purchase. This works for existing team members without changing eligibility.
+  async function verifyCatalog(setup, intervals = ['month','year']) {
+    const account = await stripe(setup, '/account');
+    if (account?.id !== setup.catalog.account) throw Error('Stripe account mismatch');
+    for (const interval of intervals) {
+      const price = setup.catalog.prices[interval], receipt = await stripe(setup, '/prices/' + price.id);
+      if (receipt.id !== price.id || receipt.livemode !== (setup.mode === 'live') || receipt.active !== true
+        || receipt.currency !== 'usd' || receipt.unit_amount !== price.amount || receipt.recurring?.interval !== interval
+        || receipt.recurring.interval_count !== 1) throw Error('Unexpected Business price');
+    }
+  }
+
   function publicStatus(setup, state) {
     const active = state.lifetimeBusiness === true || state.subscriptionActive === true;
     return {
@@ -199,11 +212,7 @@ export function createBusinessApi(options = {}) {
       throw new Stop(...DATABASE_ERRORS.get('Invalid company name'));
 
     // Verify the Stripe account and price before creating anything.
-    const account = await stripe(setup, '/account');
-    if (account?.id !== setup.catalog.account) throw Error('Stripe account mismatch');
-    const stripePrice = await stripe(setup, '/prices/' + price.id);
-    if (stripePrice.id !== price.id || stripePrice.active !== true || stripePrice.currency !== 'usd' || stripePrice.unit_amount !== price.amount
-      || stripePrice.recurring?.interval !== body.interval || stripePrice.recurring.interval_count !== 1) throw Error('Unexpected Business price');
+    await verifyCatalog(setup,[body.interval]);
 
     if (!state.hasCompany) state = await checkoutRpc(env, setup.mode, user.id, 'prepare', { companyName });
     if (!UUID.test(state.organizationId || '')) throw Error('Company not prepared');
@@ -289,7 +298,11 @@ export function createBusinessApi(options = {}) {
     try {
       const user = await verifiedUser(request);
       if (!user) return reply({ error: 'Sign in with a verified email first.', code: 'sign_in_required' }, 401, origin);
-      if (url.pathname === '/api/business/status') return reply(publicStatus(setup, await checkoutRpc(env, setup.mode, user.id, 'status')), 200, origin);
+      if (url.pathname === '/api/business/status') {
+        const state = await checkoutRpc(env, setup.mode, user.id, 'status');
+        if (setup.mode === 'test' && setup.open) await verifyCatalog(setup);
+        return reply({...publicStatus(setup,state),...(setup.mode==='test'&&setup.open?{billingConnectionVerified:true}:{})},200,origin);
+      }
       if (url.pathname === '/api/business/portal') return await portal(env, setup, user, origin);
       return await checkout(request, env, setup, user, origin);
     } catch (error) {
