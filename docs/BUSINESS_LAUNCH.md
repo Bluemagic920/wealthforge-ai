@@ -14,11 +14,11 @@ The site keeps its "Coming Soon" wording until the Business API reports live che
 ## Go-live steps
 
 1. **Database.** Applied to production on November 16, 2026 (migrations `ironcrest_business_checkout_onboarding` and `ironcrest_business_checkout_remove_auth_lookup`). `docs/business-checkout.sql` is the combined result. It adds one function and replaces `ironcrest_business_entitlement`; results for lifetime owners and the legacy subscription table are unchanged. It creates no tables and changes no rows.
-2. **Business API Worker.** Create a Worker named `profitharbor-business-api` from `worker/business-api.mjs`. The site calls `https://profitharbor-business-api.bluemagic920.workers.dev`; if the name differs, update `API` in `ph-business.js`. Settings:
+2. **Business API Worker.** Created and deployed as `profitharbor-business-api` from `worker/business-api.mjs`. On November 21 the owner entered both secrets securely, and the service reported `configured=true`, `mode=test`, `checkoutOpen=true`. This verifies configuration presence, not a completed purchase or the keys' remote permissions. The site calls `https://profitharbor-business-api.bluemagic920.workers.dev`; if the name differs, update `API` in `ph-business.js`. Settings:
    - `BUSINESS_STRIPE_MODE`: `test` first, later `live`
    - `BUSINESS_STRIPE_KEY` (secret): Stripe key for that mode
    - `SUPABASE_SERVICE_ROLE_KEY` (secret)
-   - `ENABLE_BUSINESS_CHECKOUT`: keep `false` until verification is complete
+   - `ENABLE_BUSINESS_CHECKOUT`: `true` for the approved test flow; live charging remains blocked by the source approval gate
    - `BUSINESS_WEBHOOK_READY`: `true` only after the matching account's signed webhook and paid-invoice access update have been verified
    - `BUSINESS_CHECKOUT_ATTEMPTS_READY`: `true` only after the approved `docs/business-checkout-attempts.sql` migration is installed
    - Live checkout additionally requires the reviewed release to pass `productionApproved: true` to `createBusinessApi`; the checked-in default keeps live charging closed regardless of environment flags.
@@ -31,11 +31,11 @@ The site keeps its "Coming Soon" wording until the Business API reports live che
 
 The previously missing `profitharbor-business-api` service has been created. Checkout now reserves one durable attempt per account and mode before creating a Stripe session. Monthly/annual and cross-browser requests share that reservation; retries use persisted parameters and the same Stripe idempotency key. Only a server-retrieved, verified expired session allows a new attempt. A lost response without a saved session becomes a support review if the safe retry window expires; it never silently starts another payment.
 
-The proposed `docs/business-checkout-attempts.sql` creates a service-only table and function. It does not update existing memberships, subscriptions, campaigns or payment mappings. **It has not been applied to the hosted database; approval is required.** It has been applied twice in a temporary real PostgreSQL test database, with membership preservation, role denial, immutable receipts, expiry and risk-hold checks.
+`docs/business-checkout-attempts.sql` creates a service-only table and function. Following explicit owner approval, it was applied to the hosted database on November 21 as `ironcrest_business_checkout_attempt_reservation`. Verification confirmed RLS enabled, no anonymous or signed-in table/function access, service-role execution, invoker security, an empty search path, and zero checkout attempts. Existing membership and billing-customer counts were unchanged. No advisor findings reference the new table/function. It was also applied twice in a temporary real PostgreSQL test database, with membership preservation, role denial, immutable receipts, expiry and risk-hold checks.
 
 The browser checks that the signed-in session still matches the account whose billing was displayed before sending a request and before redirecting. A failed or uncertain request requires a fresh billing status check. Returning with `?business=success` does not assert that payment was received; only server billing status can confirm activation.
 
-Remaining before opening checkout: secure credentials on the new service; approved hosted reservation migration; a real test purchase by a verified account without lifetime Business; monthly/annual payment-to-access, cancellation, failed-payment and risk checks; approved deployment of the tested Business/Pro access candidate; live webhook configuration and final production approval. Geofencing follows billing, per the owner's requested order.
+Remaining before opening live checkout: a real test purchase by a verified account without lifetime Business; monthly/annual payment-to-access, cancellation, failed-payment and risk checks; approved deployment of the tested Business/Pro access candidate; live webhook configuration and final production approval. The owner is signing in directly for the test; no account password or secret is stored in this repository. Geofencing follows billing, per the owner's requested order.
 
 ## Known limits
 
