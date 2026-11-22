@@ -300,8 +300,9 @@ export function createBusinessApi(options = {}) {
       if (!user) return reply({ error: 'Sign in with a verified email first.', code: 'sign_in_required' }, 401, origin);
       if (url.pathname === '/api/business/status') {
         const state = await checkoutRpc(env, setup.mode, user.id, 'status');
-        if (setup.mode === 'test' && setup.open) await verifyCatalog(setup);
-        return reply({...publicStatus(setup,state),...(setup.mode==='test'&&setup.open?{billingConnectionVerified:true}:{})},200,origin);
+        const verify = setup.mode === 'test' && setup.open || options.verifyConfiguration === true;
+        if (verify) await verifyCatalog(setup);
+        return reply({...publicStatus(setup,state),...(verify?{billingConnectionVerified:true}:{})},200,origin);
       }
       if (url.pathname === '/api/business/portal') return await portal(env, setup, user, origin);
       return await checkout(request, env, setup, user, origin);
