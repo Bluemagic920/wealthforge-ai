@@ -14,7 +14,7 @@ Business status, checkout and portal routes use the existing live credentials. A
 
 The existing Stripe endpoint `profitharbor-ai-live-api/.../api/stripe-webhook` retains its URL and signing secret. The original Pro handler runs first, preserving its authentication, storage and retry behavior. Only an explicitly ignored event reaches the Business handler. A Business failure returns a retryable response; a processed Pro event is never written to Business storage. Add the Business event types to the existing endpoint's event list, preserving its existing events and API version.
 
-`profitharbor-business-api` becomes a compatibility proxy. It has no credential dependency and forwards only the existing Business routes to the fixed live-service hostname. It forwards authorization, origin and content type, and drops cookies and caller-supplied Host headers. Existing frontend URLs remain unchanged.
+`profitharbor-business-api` becomes a compatibility proxy. Its `BUSINESS_BACKEND` HTTP service binding targets `profitharbor-ai-live-api`, whose existing handler still verifies authentication and ownership. The proxy has no credential dependency and forwards only the existing Business routes to the fixed live-service hostname. It forwards authorization, origin and content type, and drops cookies and caller-supplied Host headers. Existing frontend URLs remain unchanged. The binding avoids Cloudflare error 1042 for same-account public Worker fetches; no compatibility flag or new credential is required.
 
 The separately prepared `profitharbor-business-billing` Worker and new endpoint remain closed/disabled and are unused by this integration. Do not request keys for them.
 

@@ -24,6 +24,9 @@ test('compatibility proxy pins the existing service and forwards only required h
  await proxy.fetch(new Request('https://compat.example/api/business/checkout',{method:'POST',headers:{Origin:ORIGIN,Authorization:'Bearer verified',Cookie:'private',Host:'untrusted.example','Content-Type':'application/json'},body:'{"interval":"month"}'}));
  assert.equal(new URL(seen.url).hostname,'profitharbor-ai-live-api.bluemagic920.workers.dev');assert.equal(seen.headers.get('Authorization'),'Bearer verified');assert.equal(seen.headers.get('Cookie'),null);assert.equal(seen.headers.get('Host'),null);assert.equal(await seen.text(),'{"interval":"month"}');assert.equal(seen.redirect,'manual');
  assert.equal((await proxy.fetch(new Request('https://compat.example/api/stripe-webhook'))).status,404);
+ const bound=createBusinessApiProxy();assert.equal((await bound.fetch(new Request('https://compat.example/health'))).status,503,'missing binding fails closed');
+ let boundUrl;await bound.fetch(new Request('https://compat.example/health'),{BUSINESS_BACKEND:{fetch:async req=>{boundUrl=req.url;return json({configured:true});}}});
+ assert.equal(boundUrl,'https://profitharbor-ai-live-api.bluemagic920.workers.dev/api/business/health','Cloudflare service binding uses the same authenticated handler');
 });
 
 test('built integration uses existing credentials for checkout and preserves Pro/Business webhook isolation',async()=>{
