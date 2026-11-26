@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>ProfitHarbor AI — Revenue &amp; Product Sales Command</title>
+<style>
+:root{
+  --bg:#09111e;
+  --surface:#0f1c30;
+  --surface-2:#15253e;
+  --border:#223656;
+  --text:#f1f5f9;
+  --muted:#94a3b8;
+  --gold:#e5a93c;
+  --gold-soft:rgba(229,169,60,.14);
+  --blue:#3b82f6;
+  --green:#10b981;
+  --green-soft:rgba(16,185,129,.14);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);min-height:100vh}
+a{color:var(--gold);text-decoration:none}
+button,input,select{font:inherit}
+.wrap{max-width:1280px;margin:0 auto;padding:0 24px}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 0;position:sticky;top:0;z-index:10}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.logo-badge{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#1d4ed8,#0f172a);border:1px solid var(--gold);display:grid;place-items:center;font-weight:800;color:var(--gold);font-size:16px}
+.brand h1{margin:0;font-size:18px;letter-spacing:-.3px}
+.brand span{display:block;font-size:11px;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.nav-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.15s}
+.btn:hover{border-color:#415c87;background:#1a2d4c}
+.btn.primary{background:var(--gold);color:#0b1322;border-color:var(--gold)}
+.btn.primary:hover{background:#f0ba56}
+.btn:disabled{opacity:.55;cursor:wait}
+.login-shell{min-height:calc(100vh - 75px);display:grid;place-items:center;padding:32px 16px}
+.login-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border);border-top:4px solid var(--gold);border-radius:14px;padding:32px;box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.login-card h2{margin:0 0 8px;font-size:22px}
+.login-card p{margin:0 0 22px;color:var(--muted);font-size:14px;line-height:1.5}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.field input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:11px 12px;font-size:14px}
+.field input:focus{outline:2px solid var(--gold);border-color:transparent}
+.error-msg{color:#f87171;font-size:13px;margin-top:12px;min-height:18px}
+main{padding:28px 0 48px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.toolbar h2{margin:0;font-size:22px}
+.toolbar p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+select,input.search{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden}
+.kpi:before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--border)}
+.kpi.gold:before{background:var(--gold)}
+.kpi.green:before{background:var(--green)}
+.kpi.blue:before{background:var(--blue)}
+.kpi span{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
+.kpi strong{display:block;font-size:30px;margin:10px 0 6px;letter-spacing:-.8px}
+.kpi small{color:var(--muted);font-size:12px}
+.grid-2{display:grid;grid-template-columns:1.35fr 1fr;gap:20px;margin-bottom:24px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.card-head h3{margin:0;font-size:16px}
+.pill{font-size:11px;padding:4px 9px;border-radius:999px;background:var(--gold-soft);color:var(--gold);font-weight:700}
+.pill.green{background:var(--green-soft);color:var(--green)}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--border)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.bar-bg{height:6px;background:var(--bg);border-radius:99px;overflow:hidden;margin-top:6px}
+.bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--gold));border-radius:99px}
+.tier-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);gap:12px}
+.tier-item:last-child{border-bottom:none}
+.tier-item b{display:block;font-size:13px}
+.tier-item small{color:var(--muted);font-size:12px}
+.status-banner{background:var(--surface-2);border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:8px;padding:12px 16px;font-size:13px;color:#e2e8f0;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+[hidden]{display:none!important}
+@media(max-width:960px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}}
+@media(max-width:540px){.kpi-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <div class="brand">
+      <div class="logo-badge">PH</div>
+      <div>
+        <h1>ProfitHarbor AI</h1>
+        <span>Owner Revenue &amp; Sales Command</span>
+      </div>
+    </div>
+    <div class="nav-actions" id="nav-actions" hidden>
+      <span id="owner-badge" style="font-size:12px;color:var(--muted)"></span>
+      <button class="btn" id="sync-btn">Sync Stripe History</button>
+      <button class="btn" id="export-btn">Export CSV</button>
+      <button class="btn" id="logout-btn">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<section id="login-view" class="login-shell">
+  <form class="login-card" id="login-form">
+    <h2>Owner Sign In</h2>
+    <p>Log in with your ProfitHarbor AI Supabase account to view live Stripe sales and revenue across all products.</p>
+    <div class="field">
+      <label for="email">Admin Email</label>
+      <input id="email" type="email" autocomplete="email" required placeholder="you@profitharborai.com">
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required placeholder="••••••••••••">
+    </div>
+    <button class="btn primary" style="width:100%;justify-content:center;padding:12px" type="submit" id="login-submit">Sign In to Dashboard</button>
+    <div class="error-msg" id="login-error" role="alert"></div>
+  </form>
+</section>
+
+<main id="dashboard-view" class="wrap" hidden>
+  <div id="status-banner" class="status-banner" hidden>
+    <span id="status-text"></span>
+    <button class="btn" style="padding:5px 10px;font-size:12px" onclick="document.getElementById('status-banner').hidden=true">Dismiss</button>
+  </div>
+
+  <div class="toolbar">
+    <div>
+      <h2>Portfolio Sales &amp; Revenue</h2>
+      <p id="last-updated">Connected to Stripe via Supabase</p>
+    </div>
+    <div class="controls">
+      <select id="timeframe">
+        <option value="all">All Time</option>
+        <option value="30">Last 30 Days</option>
+        <option value="7">Last 7 Days</option>
+        <option value="month">This Calendar Month</option>
+      </select>
+      <select id="sort-by">
+        <option value="revenue">Sort: Highest Revenue</option>
+        <option value="units">Sort: Most Sold</option>
+        <option value="recent">Sort: Most Recent Sale</option>
+        <option value="name">Sort: Product Name (A–Z)</option>
+      </select>
+      <button class="btn primary" id="refresh-btn">Refresh</button>
+    </div>
+  </div>
+
+  <section class="kpi-grid">
+    <div class="kpi gold">
+      <span>Total Revenue Brought In</span>
+      <strong id="kpi-revenue">$0.00</strong>
+      <small id="kpi-revenue-sub">0 completed payments</small>
+    </div>
+    <div class="kpi green">
+      <span>Total Units / Plans Sold</span>
+      <strong id="kpi-units">0</strong>
+      <small id="kpi-products-count">Across 0 products</small>
+    </div>
+    <div class="kpi blue">
+      <span>Est. Monthly Recurring (MRR)</span>
+      <strong id="kpi-mrr">$0.00</strong>
+      <small>From active monthly subscriptions</small>
+    </div>
+    <div class="kpi">
+      <span>Top Performing Product</span>
+      <strong id="kpi-top" style="font-size:22px;margin-top:14px">—</strong>
+      <small id="kpi-top-sub">No sales recorded yet</small>
+    </div>
+  </section>
+
+  <section class="grid-2">
+    <div class="card">
+      <div class="card-head">
+        <h3>Products Sorted by Performance</h3>
+        <span class="pill" id="product-count-pill">0 Products</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th class="num">Sold</th>
+              <th class="num">Revenue</th>
+              <th class="num">Share</th>
+            </tr>
+          </thead>
+          <tbody id="product-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Breakdown by Pricing Tier</h3>
+        <span class="pill green">Stripe Tiers</span>
+      </div>
+      <div id="tier-list"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h3>Recent Stripe Transactions</h3>
+      <input class="search" id="tx-search" type="search" placeholder="Filter by product, tier, or customer email...">
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Product</th>
+            <th>Plan / Tier</th>
+            <th>Customer</th>
+            <th>Billing</th>
+            <th class="num">Amount</th>
+          </tr>
+        </thead>
+        <tbody id="tx-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+// === CONFIGURATION ===
+// Uses your existing ProfitHarbor AI Supabase project
+const SUPABASE_URL = 'https://nhiqbcevcdxfzvrprgck.supabase.co';
+// Paste your Supabase project's public 'anon' key here:
+const SUPABASE_ANON_KEY = 'sb_publishable_VwM3o7h2Jxq9_2WkkdE4kg_WKU6bvP6';
+// Deploy the FastAPI backend on Render and paste its URL here for one-click Stripe historical sync:
+const RENDER_SYNC_API_URL = 'https://profitharbor-sales-api.onrender.com';
+
+const CATALOG_PRODUCTS = [
+  'ProviderGuard',
+  'Zeus One Pulse',
+  'ZeroWaste IT',
+  'ComplyPulse',
+  'CareFlow',
+  'ZEUS ONE',
+  'Ironcrest',
+  'ProfitHarbor AI'
+];
+
+let accessToken = localStorage.getItem('ph_owner_token') || '';
+let ownerEmail = localStorage.getItem('ph_owner_email') || '';
+let allSales = [];
+
+const $ = (id) => document.getElementById(id);
+
+function showStatus(msg) {
+  $('status-text').textContent = msg;
+  $('status-banner').hidden = false;
+}
+
+function money(cents) {
+  return '$' + (Number(cents || 0) / 100).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+async function sbAuthSignIn(email, password) {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error_description || data.msg || 'Sign-in failed');
+  accessToken = data.access_token;
+  ownerEmail = data.user?.email || email;
+  localStorage.setItem('ph_owner_token', accessToken);
+  localStorage.setItem('ph_owner_email', ownerEmail);
+}
+
+async function fetchSales() {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/sales_ledger?select=*&order=created_at.desc`, {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${accessToken}`
+    }
+  });
+  if (res.status === 401 || res.status === 403) {
+    signOut();
+    throw new Error('Session expired. Please sign in again.');
+  }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Could not load sales_ledger');
+  allSales = Array.isArray(data) ? data : [];
+}
+
+function filterByTimeframe(rows) {
+  const tf = $('timeframe').value;
+  if (tf === 'all') return rows;
+  const now = new Date();
+  return rows.filter((r) => {
+    const d = new Date(r.created_at);
+    if (tf === 'month') {
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }
+    const days = Number(tf);
+    return (now - d) <= days * 86400000;
+  });
+}
+
+function renderDashboard() {
+  const rows = filterByTimeframe(allSales);
+  const sortBy = $('sort-by').value;
+  const query = $('tx-search').value.trim().toLowerCase();
+
+  const totalCents = rows.reduce((sum, r) => sum + (r.amount_cents || 0), 0);
+  const totalUnits = rows.length;
+
+  // Estimate MRR from unique active monthly subscriptions across all time
+  const subMap = new Map();
+  allSales.forEach((r) => {
+    if (r.billing_interval === 'month' && r.status === 'paid') {
+      const key = r.stripe_subscription_id || r.stripe_session_id || r.id;
+      subMap.set(key, r.amount_cents || 0);
+    }
+  });
+  let mrrCents = 0;
+  subMap.forEach((v) => { mrrCents += v; });
+
+  // Group by product (include core catalog products even if 0 sales yet)
+  const productMap = new Map();
+  CATALOG_PRODUCTS.forEach((p) => {
+    productMap.set(p, { name: p, units: 0, cents: 0, latest: 0 });
+  });
+
+  rows.forEach((r) => {
+    const name = r.product_name || 'Other';
+    if (!productMap.has(name)) {
+      productMap.set(name, { name, units: 0, cents: 0, latest: 0 });
+    }
+    const entry = productMap.get(name);
+    entry.units += 1;
+    entry.cents += (r.amount_cents || 0);
+    const ts = new Date(r.created_at).getTime();
+    if (ts > entry.latest) entry.latest = ts;
+  });
+
+  const products = Array.from(productMap.values()).sort((a, b) => {
+    if (sortBy === 'units') return b.units - a.units || b.cents - a.cents;
+    if (sortBy === 'recent') return b.latest - a.latest || b.cents - a.cents;
+    if (sortBy === 'name') return a.name.localeCompare(b.name);
+    return b.cents - a.cents || b.units - a.units;
+  });
+
+  const activeProducts = products.filter((p) => p.units > 0);
+  const top = activeProducts[0];
+
+  $('kpi-revenue').textContent = money(totalCents);
+  $('kpi-revenue-sub').textContent = `${totalUnits} completed payment${totalUnits === 1 ? '' : 's'}`;
+  $('kpi-units').textContent = totalUnits.toLocaleString();
+  $('kpi-products-count').textContent = `Across ${activeProducts.length} active product${activeProducts.length === 1 ? '' : 's'}`;
+  $('kpi-mrr').textContent = money(mrrCents);
+  $('kpi-top').textContent = top ? top.name : '—';
+  $('kpi-top-sub').textContent = top ? `${money(top.cents)} (${top.units} sold)` : 'No sales in selected window';
+  $('product-count-pill').textContent = `${products.length} Tracked`;
+
+  $('product-tbody').innerHTML = products.map((p) => {
+    const share = totalCents > 0 ? Math.round((p.cents / totalCents) * 100) : 0;
+    return `
+      <tr>
+        <td>
+          <strong>${esc(p.name)}</strong>
+          <div class="bar-bg"><div class="bar-fill" style="width:${share}%"></div></div>
+        </td>
+        <td class="num">${p.units}</td>
+        <td class="num"><strong>${money(p.cents)}</strong></td>
+        <td class="num">${share}%</td>
+      </tr>
+    `;
+  }).join('');
+
+  // Tier breakdown
+  const tierMap = new Map();
+  rows.forEach((r) => {
+    const key = `${r.product_name} — ${r.tier_name}`;
+    if (!tierMap.has(key)) {
+      tierMap.set(key, { product: r.product_name, tier: r.tier_name, units: 0, cents: 0 });
+    }
+    const t = tierMap.get(key);
+    t.units += 1;
+    t.cents += (r.amount_cents || 0);
+  });
+  const tiers = Array.from(tierMap.values()).sort((a, b) => b.cents - a.cents);
+
+  $('tier-list').innerHTML = tiers.length
+    ? tiers.map((t) => `
+        <div class="tier-item">
+          <div>
+            <b>${esc(t.product)}</b>
+            <small>${esc(t.tier)} · ${t.units} sold</small>
+          </div>
+          <strong>${money(t.cents)}</strong>
+        </div>
+      `).join('')
+    : '<p style="color:var(--muted);font-size:13px">No Stripe tier transactions yet. Click <b>Sync Stripe History</b> after connecting your webhook.</p>';
+
+  // Transactions table
+  const filteredTx = rows.filter((r) => {
+    if (!query) return true;
+    return [r.product_name, r.tier_name, r.customer_email].some((v) =>
+      String(v || '').toLowerCase().includes(query)
+    );
+  });
+
+  $('tx-tbody').innerHTML = filteredTx.length
+    ? filteredTx.map((r) => `
+        <tr>
+          <td>${new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+          <td><strong>${esc(r.product_name)}</strong></td>
+          <td>${esc(r.tier_name)}</td>
+          <td>${esc(r.customer_email || '—')}</td>
+          <td>${esc(r.billing_interval)}</td>
+          <td class="num"><strong>${money(r.amount_cents)}</strong></td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:24px">No matching transactions found.</td></tr>';
+
+  $('last-updated').textContent = `Last refreshed ${new Date().toLocaleTimeString()} · ${allSales.length} total ledger records`;
+}
+
+function showApp() {
+  $('login-view').hidden = true;
+  $('dashboard-view').hidden = false;
+  $('nav-actions').hidden = false;
+  $('owner-badge').textContent = ownerEmail;
+}
+
+function signOut() {
+  accessToken = '';
+  ownerEmail = '';
+  localStorage.removeItem('ph_owner_token');
+  localStorage.removeItem('ph_owner_email');
+  $('login-view').hidden = false;
+  $('dashboard-view').hidden = true;
+  $('nav-actions').hidden = true;
+}
+
+$('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('login-error').textContent = '';
+  if (SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+    $('login-error').textContent = 'Add your Supabase anon key in sales-dashboard.html first.';
+    return;
+  }
+  const btn = $('login-submit');
+  btn.disabled = true;
+  try {
+    await sbAuthSignIn($('email').value.trim(), $('password').value);
+    showApp();
+    await fetchSales();
+    renderDashboard();
+  } catch (err) {
+    $('login-error').textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('refresh-btn').addEventListener('click', async () => {
+  $('refresh-btn').disabled = true;
+  try {
+    await fetchSales();
+    renderDashboard();
+  } catch (err) {
+    showStatus(err.message);
+  } finally {
+    $('refresh-btn').disabled = false;
+  }
+});
+
+$('sync-btn').addEventListener('click', async () => {
+  const btn = $('sync-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${RENDER_SYNC_API_URL}/api/sync-stripe`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Sync failed');
+    await fetchSales();
+    renderDashboard();
+    showStatus(`Synced ${data.synced} completed Stripe checkout(s) into your ledger.`);
+  } catch (err) {
+    showStatus(`Stripe sync error: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('export-btn').addEventListener('click', () => {
+  const rows = filterByTimeframe(allSales);
+  const header = ['date', 'product', 'tier', 'customer_email', 'billing_interval', 'amount_usd', 'status'];
+  const csv = [
+    header.join(','),
+    ...rows.map((r) => [
+      r.created_at,
+      `"${String(r.product_name || '').replace(/"/g, '""')}"`,
+      `"${String(r.tier_name || '').replace(/"/g, '""')}"`,
+      `"${String(r.customer_email || '').replace(/"/g, '""')}"`,
+      r.billing_interval,
+      ((r.amount_cents || 0) / 100).toFixed(2),
+      r.status
+    ].join(','))
+  ].join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `profitharbor-sales-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+});
+
+$('logout-btn').addEventListener('click', signOut);
+$('timeframe').addEventListener('change', renderDashboard);
+$('sort-by').addEventListener('change', renderDashboard);
+$('tx-search').addEventListener('input', renderDashboard);
+
+(async function init() {
+  if (accessToken && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
+    try {
+      showApp();
+      await fetchSales();
+      renderDashboard();
+    } catch (_) {
+      signOut();
+    }
+  }
+})();
+</script>
+</body>
+</html>
